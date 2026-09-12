@@ -1,26 +1,247 @@
 @import "tailwindcss";
 
+/* ── design tokens ──────────────────────────────────────────────────
+   True black, committed. Text is white or ash — nothing in between.
+   Colour carries exactly one meaning: green is money in, red is money
+   out or trouble. Nothing decorative is ever coloured. */
+
+@theme {
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, "Segoe UI",
+    Roboto, sans-serif;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+
+  --black: #000000;
+  --surface: #0d0d0f; /* grouped rows, sheets */
+  --surface-2: #18181b; /* inputs, keypad keys, chips */
+  --line: #1f1f23; /* hairlines only */
+  --key: #212125; /* keypad keys — the one thing that must look tappable */
+
+  --ink: #ffffff;
+  --ash: #8a8a8e; /* secondary text */
+  --ash-dim: #55555a; /* tertiary / placeholders */
+
+  --green: #21db9a;
+  --red: #ff453a;
+  --amber: #ffd60a;
+
+  --accent: var(--green);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  -webkit-tap-highlight-color: transparent;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  background: var(--black);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior-y: none;
+  letter-spacing: -0.01em;
+}
+
+/* ── type scale ─────────────────────────────────────────────────── */
+
+.title-lg {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.033em;
+  line-height: 1.1;
+}
+
+.title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+
+.muted {
+  color: var(--ash);
+}
+
+.faint {
+  color: var(--ash-dim);
+}
+
+.pos {
+  color: var(--green);
+}
+
+.neg {
+  color: var(--red);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* ── surfaces ───────────────────────────────────────────────────── */
+
+/* A grouped list, iOS style: one soft block, hairlines inside it, no border. */
+.panel {
+  background: var(--surface);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.hairline + .hairline {
+  border-top: 1px solid var(--line);
+}
+
+/* ── controls ───────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.875rem;
+  padding: 0 1.1rem;
+  border-radius: 0.85rem;
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+  transition: opacity 0.12s ease, transform 0.08s ease;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.3;
+}
+
+/* Black on vivid green: ~10:1 contrast, and it reads as the one action
+   on the screen that matters. */
+.btn-primary {
+  background: var(--green);
+  color: #000;
+}
+
+.btn-ghost {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.btn-plain {
+  background: transparent;
+  color: var(--green);
+  padding: 0;
+  min-height: 2.25rem;
+}
+
+.btn-danger {
+  background: var(--surface-2);
+  color: var(--red);
+}
+
+.field {
+  width: 100%;
+  min-height: 2.875rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 0.75rem;
+  border: 0;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 16px; /* anything smaller makes iOS zoom on focus */
+}
+.field::placeholder {
+  color: var(--ash-dim);
+}
+.field:focus {
+  outline: 2px solid var(--green);
+  outline-offset: -2px;
+}
+
+.label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--ash);
+  margin-bottom: 0.4rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: var(--surface-2);
+  color: var(--ash);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.chip[aria-pressed="true"],
+.chip[data-selected="true"] {
+  background: var(--green);
+  color: #000;
+  font-weight: 600;
+}
+
+/* ── layout ─────────────────────────────────────────────────────── */
+
+.safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.page {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding-bottom: 2rem;
+  }
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.pop {
+  animation: pop 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pop {
+    animation: none;
+  }
+  .btn:active {
+    transform: none;
+  }
 }
