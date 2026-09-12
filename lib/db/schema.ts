@@ -46,6 +46,9 @@ export const txnTypeEnum = pgEnum("txn_type", [
 
 export const severityEnum = pgEnum("severity", ["info", "warn", "urgent"]);
 
+/** Budgets reset either every Monday or on the 1st. */
+export const budgetPeriodEnum = pgEnum("budget_period", ["weekly", "monthly"]);
+
 /* ───────────────────────────── settings ──────────────────────────── */
 /** Single-row table (id = 1). Holds app-wide preferences. */
 export const settings = pgTable("settings", {
@@ -153,10 +156,10 @@ export const categories = pgTable(
     parentId: integer("parent_id"),
     icon: text("icon").notNull().default("tag"),
     color: text("color").notNull().default("#64748b"),
-    /** Monthly budget in BASE currency minor units. 0 = no budget. */
-    monthlyBudgetMinor: bigint("monthly_budget_minor", { mode: "number" })
-      .notNull()
-      .default(0),
+    /** Budget per period, in BASE currency minor units. 0 = no budget. */
+    budgetMinor: bigint("budget_minor", { mode: "number" }).notNull().default(0),
+    /** Whether that amount is meant to last a week or a month. */
+    budgetPeriod: budgetPeriodEnum("budget_period").notNull().default("monthly"),
     /** System categories (Bank Fees, FX Difference…) cannot be deleted. */
     isSystem: boolean("is_system").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
@@ -365,6 +368,7 @@ export type Posting = typeof postings.$inferSelect;
 export type NewPosting = typeof postings.$inferInsert;
 export type FxRate = typeof fxRates.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
+export type BudgetPeriod = (typeof budgetPeriodEnum.enumValues)[number];
 export type Currency = (typeof currencyEnum.enumValues)[number];
 export type AccountType = (typeof accountTypeEnum.enumValues)[number];
 export type TxnType = (typeof txnTypeEnum.enumValues)[number];

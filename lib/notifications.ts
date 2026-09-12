@@ -1,11 +1,15 @@
-import { and, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
+import { and, eq, isNotNull, lte, notInArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { categories, notifications, postings, transactions } from "@/lib/db/schema";
-import { getCardsOverview, getPeopleOverview } from "@/lib/queries";
+import { notifications, transactions } from "@/lib/db/schema";
+import {
+  getBudgetStatus,
+  getCardsOverview,
+  getPeopleOverview,
+} from "@/lib/queries";
 import { formatMoney } from "@/lib/money";
 import { BASE_CURRENCY } from "@/lib/fx";
 import { iso } from "@/lib/cards";
-import { endOfMonth, startOfMonth, differenceInCalendarDays } from "date-fns";
+import { differenceInCalendarDays } from "date-fns";
 
 type Draft = {
   kind: string;
@@ -72,43 +76,23 @@ export async function refreshNotifications(force = false) {
     }
   }
 
-  /* ── budgets ───────────────────────────────────────────────────── */
-  const from = iso(startOfMonth(today));
-  const to = iso(endOfMonth(today));
-  const budgetRows = await db
-    .select({
-      id: categories.id,
-      name: categories.name,
-      budget: categories.monthlyBudgetMinor,
-      spent: sql<number>`coalesce(sum(${postings.baseAmountMinor}), 0)`.mapWith(Number),
-    })
-    .from(categories)
-    .leftJoin(postings, eq(postings.categoryId, categories.id))
-    .leftJoin(
-      transactions,
-      and(
-        eq(transactions.id, postings.transactionId),
-        gte(transactions.date, from),
-        lte(transactions.date, to),
-      ),
-    )
-    .where(and(eq(categories.kind, "expense"), sql`${categories.monthlyBudgetMinor} > 0`))
-    .groupBy(categories.id, categories.name, categories.monthlyBudgetMinor);
-
-  for (const b of budgetRows) {
-    if (b.budget <= 0) continue;
-    const ratio = b.spent / b.budget;
-    if (ratio < 0.8) continue;
+  /* ── budgets, each against its own week or month ───────────────── */
+  for (const b of await getBudgetStatus()) {
+    if (b.ratio < 0.8) continue;
     drafts.push({
       kind: "budget",
-      severity: ratio >= 1 ? "urgent" : "warn",
+      severity: b.ratio >= 1 ? "urgent" : "warn",
       title:
-        ratio >= 1
+        b.ratio >= 1
           ? `${b.name} is over budget`
-          : `${b.name} at ${Math.round(ratio * 100)}% of budget`,
-      body: `${formatMoney(b.spent, BASE_CURRENCY)} of ${formatMoney(b.budget, BASE_CURRENCY)} this month.`,
-      dedupeKey: `budget:${b.id}:${from.slice(0, 7)}`,
-      href: `/reports`,
+          : `${b.name} at ${Math.round(b.ratio * 100)}% of budget`,
+      body:
+        `${formatMoney(b.spentMinor, BASE_CURRENCY)} of ` +
+        `${formatMoney(b.budgetMinor, BASE_CURRENCY)} ` +
+        `${b.period === "weekly" ? "this week" : "this month"}.`,
+      // Keyed by the period window, so a weekly alert can fire again next week.
+      dedupeKey: `budget:${b.id}:${b.window.from}`,
+      href: `/budgets`,
     });
   }
 
@@ -179,11 +163,16 @@ export async function refreshNotifications(force = false) {
       });
   }
 
-  await db.delete(notifications).where(
-    liveKeys.length
-      ? sql`${notifications.dedupeKey} <> all(${liveKeys})`
-      : sql`true`,
-  );
+  // Drop anything that no longer applies — a bill paid, a budget reset.
+  // Raw `<> all($1)` cannot take a JS array as one parameter, so use the
+  // builder, and clear the table outright when nothing is live.
+  if (liveKeys.length) {
+    await db
+      .delete(notifications)
+      .where(notInArray(notifications.dedupeKey, liveKeys));
+  } else {
+    await db.delete(notifications);
+  }
 
   return drafts.length;
 }

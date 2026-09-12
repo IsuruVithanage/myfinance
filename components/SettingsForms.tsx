@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2, Plus, Trash2, X } from "lucide-react";
 import { archiveCategory, saveCategory, setUsdLkrRate } from "@/lib/actions";
-import { BASE_CURRENCY, formatMoney, toMinor } from "@/lib/money";
+
 
 /** The USD→LKR rate used to value USD balances and to convert new entries. */
 export function RateForm({ current }: { current: number }) {
@@ -71,92 +71,9 @@ type Cat = {
   name: string;
   kind: "expense" | "income";
   color: string;
-  monthlyBudgetMinor: number;
+  icon: string;
   isSystem: boolean;
 };
-
-/** Monthly budgets, edited in place. Empty means "no budget". */
-export function BudgetEditor({ categories }: { categories: Cat[] }) {
-  const router = useRouter();
-  const [drafts, setDrafts] = useState<Record<number, string>>({});
-  const [savingId, setSavingId] = useState<number | null>(null);
-  const [, start] = useTransition();
-
-  const expenses = categories.filter((c) => c.kind === "expense" && !c.isSystem);
-
-  function save(c: Cat) {
-    const raw = drafts[c.id];
-    if (raw === undefined) return;
-    setSavingId(c.id);
-    start(async () => {
-      await saveCategory({
-        id: c.id,
-        name: c.name,
-        kind: c.kind,
-        color: c.color,
-        monthlyBudgetMinor: toMinor(raw || "0", BASE_CURRENCY),
-      });
-      setSavingId(null);
-      setDrafts((d) => {
-        const next = { ...d };
-        delete next[c.id];
-        return next;
-      });
-      router.refresh();
-    });
-  }
-
-  return (
-    <div className="panel overflow-hidden">
-      <div className="px-4 py-4">
-        <h2 className="font-semibold">Monthly budgets</h2>
-        <p className="muted mt-0.5 text-sm">
-          In LKR. You get an alert at 80% and again when you go over.
-        </p>
-      </div>
-      <ul >
-        {expenses.map((c) => {
-          const value =
-            drafts[c.id] ??
-            (c.monthlyBudgetMinor
-              ? formatMoney(c.monthlyBudgetMinor, BASE_CURRENCY, {
-                  bare: true,
-                  trimZeros: true,
-                })
-              : "");
-          return (
-            <li
-              key={c.id}
-              className="hairline flex items-center gap-3 px-4 py-2.5"
-             
-            >
-              <span
-                aria-hidden
-                className="h-3 w-3 shrink-0 rounded-full"
-                style={{ background: c.color }}
-              />
-              <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                {c.name}
-              </span>
-              <input
-                className="field num w-28 text-right"
-                inputMode="decimal"
-                placeholder="—"
-                aria-label={`${c.name} monthly budget`}
-                value={value}
-                onChange={(e) =>
-                  setDrafts((d) => ({ ...d, [c.id]: e.target.value }))
-                }
-                onBlur={() => save(c)}
-              />
-              {savingId === c.id && <Loader2 size={15} className="animate-spin" />}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
 
 /** Create, rename and retire categories. Built-in ones can't be removed. */
 export function CategoryManager({ categories }: { categories: Cat[] }) {
@@ -192,8 +109,8 @@ export function CategoryManager({ categories }: { categories: Cat[] }) {
         id: c.id,
         name: editName,
         kind: c.kind,
+        icon: c.icon,
         color: c.color,
-        monthlyBudgetMinor: c.monthlyBudgetMinor,
       });
       setEditingId(null);
       if (r.ok) router.refresh();

@@ -5,7 +5,7 @@ import {
   startOfMonth,
   subMonths,
 } from "date-fns";
-import { ArrowLeftRight, ChartPie, Plus, Receipt, Users } from "lucide-react";
+import { ChartPie, PiggyBank, Plus, Receipt, Users } from "lucide-react";
 import {
   getAccountsWithBalances,
   getCardsOverview,
@@ -34,8 +34,8 @@ export const dynamic = "force-dynamic";
 const QUICK_ACTIONS = [
   { href: "/transactions", label: "History", icon: Receipt },
   { href: "/reports", label: "Reports", icon: ChartPie },
+  { href: "/budgets", label: "Budgets", icon: PiggyBank },
   { href: "/people", label: "People", icon: Users },
-  { href: "/accounts", label: "Accounts", icon: ArrowLeftRight },
 ];
 
 export default async function DashboardPage() {

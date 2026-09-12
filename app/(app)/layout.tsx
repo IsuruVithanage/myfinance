@@ -1,7 +1,5 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Settings as SettingsIcon } from "lucide-react";
-import { auth } from "@/lib/auth";
 import { getNotifications } from "@/lib/queries";
 import { refreshNotifications } from "@/lib/notifications";
 import BottomNav, { SideNav } from "@/components/BottomNav";
@@ -12,9 +10,6 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
-  if (!session?.user) redirect("/signin");
-
   await refreshNotifications();
   const alerts = await getNotifications();
 

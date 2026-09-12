@@ -27,16 +27,19 @@ import {
   updateSimpleTransaction,
 } from "@/lib/ledger";
 import { refreshNotifications } from "@/lib/notifications";
-import { auth } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
 export type ActionResult =
   | { ok: true; id?: number }
   | { ok: false; error: string };
 
-/** Every mutation goes through here. No session, no write. */
+/** Every mutation goes through here. No valid session, no write. */
 async function requireSession() {
-  const session = await auth();
-  if (!session?.user) throw new Error("Not signed in.");
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!(await verifySessionToken(process.env.AUTH_SECRET, token))) {
+    throw new Error("Locked. Enter your passcode again.");
+  }
 }
 
 function fail(e: unknown): ActionResult {
@@ -261,7 +264,8 @@ export async function saveCategory(input: {
   kind: "expense" | "income";
   icon?: string;
   color?: string;
-  monthlyBudgetMinor?: number;
+  budgetMinor?: number;
+  budgetPeriod?: "weekly" | "monthly";
 }): Promise<ActionResult> {
   try {
     await requireSession();
@@ -273,7 +277,8 @@ export async function saveCategory(input: {
       kind: input.kind,
       icon: input.icon ?? "tag",
       color: input.color ?? "#64748b",
-      monthlyBudgetMinor: input.monthlyBudgetMinor ?? 0,
+      budgetMinor: input.budgetMinor ?? 0,
+      budgetPeriod: input.budgetPeriod ?? "monthly",
     };
 
     if (input.id) {

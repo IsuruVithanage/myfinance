@@ -13,6 +13,7 @@ import {
 import type { Currency } from "@/lib/db/schema";
 import { BASE_CURRENCY, getUsdLkrRate, toBaseMinor } from "@/lib/fx";
 import { getCardCycle, iso, utilisation } from "@/lib/cards";
+import { currentPeriod, periodProgress } from "@/lib/budget";
 
 const num = (expr: ReturnType<typeof sql>) => sql<number>`${expr}`.mapWith(Number);
 
@@ -345,7 +346,8 @@ export async function getCategoryBreakdown(
       name: categories.name,
       color: categories.color,
       icon: categories.icon,
-      budgetMinor: categories.monthlyBudgetMinor,
+      budgetMinor: categories.budgetMinor,
+      budgetPeriod: categories.budgetPeriod,
       totalBase: num(
         sql`coalesce(sum(${kind === "income" ? sql`-` : sql``}${postings.baseAmountMinor}), 0)`,
       ),
@@ -361,7 +363,14 @@ export async function getCategoryBreakdown(
         lte(transactions.date, to),
       ),
     )
-    .groupBy(categories.id, categories.name, categories.color, categories.icon, categories.monthlyBudgetMinor)
+    .groupBy(
+      categories.id,
+      categories.name,
+      categories.color,
+      categories.icon,
+      categories.budgetMinor,
+      categories.budgetPeriod,
+    )
     .orderBy(desc(num(sql`coalesce(sum(${postings.baseAmountMinor}), 0)`)));
 
   // Same-length window just before this one, so each row can show a trend.
@@ -525,6 +534,65 @@ export async function getCardsOverview() {
       };
     }),
   );
+}
+
+/* ────────────────────────────  budgets  ──────────────────────────── */
+
+export type BudgetStatus = Awaited<ReturnType<typeof getBudgetStatus>>[number];
+
+/**
+ * Every budgeted category measured against its OWN current period — a weekly
+ * budget against this week, a monthly one against this month. Comparing both
+ * to the same window is the easy mistake here.
+ */
+export async function getBudgetStatus() {
+  const rows = await db
+    .select()
+    .from(categories)
+    .where(and(eq(categories.kind, "expense"), sql`${categories.budgetMinor} > 0`))
+    .orderBy(categories.sortOrder, categories.name);
+
+  if (rows.length === 0) return [];
+
+  // One query per distinct period, not per category.
+  const windows = new Map<string, { from: string; to: string }>();
+  for (const r of rows) {
+    if (!windows.has(r.budgetPeriod)) {
+      windows.set(r.budgetPeriod, currentPeriod(r.budgetPeriod));
+    }
+  }
+
+  const spendByPeriod = new Map<string, Map<number, number>>();
+  for (const [period, w] of windows) {
+    const spend = await db
+      .select({
+        categoryId: categories.id,
+        spent: num(sql`coalesce(sum(${postings.baseAmountMinor}), 0)`),
+      })
+      .from(postings)
+      .innerJoin(categories, eq(categories.id, postings.categoryId))
+      .innerJoin(transactions, eq(transactions.id, postings.transactionId))
+      .where(and(gte(transactions.date, w.from), lte(transactions.date, w.to)))
+      .groupBy(categories.id);
+    spendByPeriod.set(period, new Map(spend.map((r) => [r.categoryId, r.spent])));
+  }
+
+  return rows.map((c) => {
+    const window = windows.get(c.budgetPeriod)!;
+    const spent = spendByPeriod.get(c.budgetPeriod)?.get(c.id) ?? 0;
+    return {
+      id: c.id,
+      name: c.name,
+      icon: c.icon,
+      budgetMinor: c.budgetMinor,
+      period: c.budgetPeriod,
+      window,
+      spentMinor: spent,
+      remainingMinor: c.budgetMinor - spent,
+      ratio: c.budgetMinor > 0 ? spent / c.budgetMinor : 0,
+      pace: periodProgress(c.budgetPeriod),
+    };
+  });
 }
 
 /* ────────────────────────────  people  ───────────────────────────── */

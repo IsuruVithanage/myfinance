@@ -1,8 +1,9 @@
 # MyFinance
 
 A single-user finance app: multiple accounts in **LKR and USD**, credit cards with
-due-date alerts, money lent and borrowed, transaction fees, and categorised
-spending and income. Mobile-first, installable as a PWA, deployable free.
+due-date alerts, money lent and borrowed, transaction fees, weekly or monthly
+budgets, and categorised spending and income. Mobile-first, installable as a
+PWA, deployable free.
 
 ---
 
@@ -55,7 +56,7 @@ Each account holds exactly one currency. The split that matters:
 | Framework | Next.js 15 (App Router), React 19, TypeScript |
 | Database | Neon — serverless Postgres, free tier |
 | ORM | Drizzle + drizzle-kit migrations |
-| Auth | Auth.js v5, Google OAuth, hard email allowlist |
+| Access | One passcode, one signed cookie — no accounts, no provider |
 | UI | Tailwind CSS v4, lucide icons, Recharts |
 | Hosting | Vercel Hobby (free) |
 | Backups | GitHub Actions → nightly `pg_dump` into this repo |
@@ -69,40 +70,35 @@ Each account holds exactly one currency. The split that matters:
 1. Create a free project at [neon.tech](https://neon.tech).
 2. Copy the **pooled** connection string (the host contains `-pooler`).
 
-### 2. Google sign-in
-
-1. Google Cloud Console → **APIs & Services → Credentials → OAuth client ID → Web**.
-2. Authorised redirect URIs:
-   - `http://localhost:3000/api/auth/callback/google`
-   - `https://YOUR-APP.vercel.app/api/auth/callback/google`
-
-### 3. Environment
+### 2. Environment
 
 ```bash
 cp .env.example .env
 ```
 
-Fill in `DATABASE_URL`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, and your own
-address in `ALLOWED_EMAILS`. Generate the secret with:
+Fill in `DATABASE_URL`, pick an `APP_PASSCODE`, and generate `AUTH_SECRET`:
 
 ```bash
-npx auth secret
+openssl rand -base64 32
 ```
 
-### 4. Install, migrate, seed
+`APP_PASSCODE` is what you type once per device. `AUTH_SECRET` signs the session
+cookie — changing it locks every device out again, which is the kill switch if a
+phone goes missing.
+
+### 3. Install, migrate, seed
 
 ```bash
 npm install && npm run db:migrate && npm run seed
 ```
 
-### 5. Run
+### 4. Run
 
 ```bash
 npm run dev
 ```
 
-Open <http://localhost:3000>. For local work without Google OAuth, set
-`ALLOW_DEV_LOGIN="1"` in `.env` — it is refused in any production build.
+Open <http://localhost:3000> and enter your passcode.
 
 ---
 
@@ -110,10 +106,9 @@ Open <http://localhost:3000>. For local work without Google OAuth, set
 
 1. Push this repository to GitHub.
 2. Import it at [vercel.com/new](https://vercel.com/new) — the defaults are correct.
-3. Add the environment variables from `.env.example` in **Project → Settings →
-   Environment Variables** (leave `ALLOW_DEV_LOGIN` unset).
-4. Set `AUTH_URL` to your deployed URL, e.g. `https://myfinance.vercel.app`.
-5. Deploy, then add your production callback URL to the Google OAuth client.
+3. Add the three variables from `.env.example` in **Project → Settings →
+   Environment Variables**.
+4. Deploy.
 
 Run migrations against production whenever the schema changes:
 
@@ -126,6 +121,17 @@ DATABASE_URL="<neon-url>" npm run db:migrate
 Open the deployed site in Safari or Chrome and choose **Add to Home Screen**. It
 runs full-screen with its own icon and shows a clear offline notice rather than
 a stale balance.
+
+### How access works
+
+There is no account system. `APP_PASSCODE` unlocks a device; the server then
+sets an HMAC-signed, `httpOnly` cookie valid for a year. Middleware verifies the
+signature on every request, so a forged or expired cookie is rejected before any
+page or API route runs.
+
+This keeps a stranger who finds the URL out. It is not designed to withstand
+someone who already has your unlocked phone — treat the passcode like a door
+key, and rotate `AUTH_SECRET` to revoke every device at once.
 
 ---
 
@@ -164,10 +170,9 @@ change to `lib/ledger.ts`.
 
 ```
 app/
-  (app)/            signed-in screens — dashboard, add, accounts, cards,
-                    people, transactions, reports, settings
-  signin/           sign-in page
-  api/auth/         Auth.js handler
+  (app)/            unlocked screens — dashboard, add, accounts, cards,
+                    budgets, people, transactions, reports, settings
+  unlock/           passcode screen
   api/export/       JSON + CSV export
 lib/
   db/schema.ts      tables, enums, relations
@@ -176,6 +181,8 @@ lib/
   cards.ts          statement cycle and due-date maths
   fx.ts             rate lookup and conversion
   money.ts          minor units, parsing, one formatter
+  session.ts        passcode check and signed session cookie
+  budget.ts         weekly/monthly periods and range scaling
   notifications.ts  regenerates the in-app alert inbox
   actions.ts        server actions (all mutations)
 components/         UI, client-side where it needs to be

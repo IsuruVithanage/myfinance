@@ -15,6 +15,7 @@ import {
 import { iso } from "@/lib/cards";
 import { BASE_CURRENCY, formatMoney } from "@/lib/money";
 import { iconFor } from "@/lib/icons";
+import { budgetForRange } from "@/lib/budget";
 import {
   Change,
   IconTile,
@@ -47,7 +48,6 @@ function resolveRange(key: RangeKey) {
         from: iso(startOfMonth(m)),
         to: iso(endOfMonth(m)),
         label: format(m, "MMMM yyyy"),
-        months: 1,
       };
     }
     case "3m":
@@ -55,21 +55,18 @@ function resolveRange(key: RangeKey) {
         from: iso(startOfMonth(subMonths(now, 2))),
         to: iso(endOfMonth(now)),
         label: "Last 3 months",
-        months: 3,
       };
     case "year":
       return {
         from: iso(startOfYear(now)),
         to: iso(endOfMonth(now)),
         label: format(now, "yyyy"),
-        months: now.getMonth() + 1,
       };
     default:
       return {
         from: iso(startOfMonth(now)),
         to: iso(endOfMonth(now)),
         label: format(now, "MMMM yyyy"),
-        months: 1,
       };
   }
 }
@@ -83,7 +80,7 @@ export default async function ReportsPage({
   const rangeKey = (RANGES.find((r) => r.key === sp.range)?.key ??
     "month") as RangeKey;
   const kind = sp.kind === "income" ? "income" : "expense";
-  const { from, to, label, months } = resolveRange(rangeKey);
+  const { from, to, label } = resolveRange(rangeKey);
 
   const [totals, breakdown, trend, daily] = await Promise.all([
     getPeriodTotals(from, to),
@@ -225,7 +222,7 @@ export default async function ReportsPage({
         )}
         {breakdown.map((b) => {
           const share = total > 0 ? b.totalBase / total : 0;
-          const budget = b.budgetMinor * months;
+          const budget = budgetForRange(b.budgetMinor, b.budgetPeriod, from, to);
           return (
             <li key={b.categoryId} className="hairline px-4 py-3.5">
               <div className="flex items-center gap-3">

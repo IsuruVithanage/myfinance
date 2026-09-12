@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChartPie, CreditCard, House, Plus, Users, Wallet } from "lucide-react";
+import {
+  ChartPie,
+  CreditCard,
+  House,
+  PiggyBank,
+  Plus,
+  Users,
+  Wallet,
+} from "lucide-react";
 
 const TABS = [
   { href: "/", label: "Home", icon: House },
@@ -82,6 +90,7 @@ export function SideNav() {
     { href: "/add", label: "Add", icon: Plus },
     { href: "/accounts", label: "Accounts", icon: Wallet },
     { href: "/cards", label: "Cards", icon: CreditCard },
+    { href: "/budgets", label: "Budgets", icon: PiggyBank },
     { href: "/people", label: "People", icon: Users },
     { href: "/reports", label: "Reports", icon: ChartPie },
   ];

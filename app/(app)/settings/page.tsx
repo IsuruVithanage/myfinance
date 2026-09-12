@@ -1,13 +1,11 @@
 import Link from "next/link";
-import { Download, LogOut } from "lucide-react";
-import { signOut } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { SESSION_COOKIE } from "@/lib/session";
+import { Download, Lock } from "lucide-react";
 import { getCategories, getSettings } from "@/lib/queries";
 import { PageHeader } from "@/components/ui";
-import {
-  BudgetEditor,
-  CategoryManager,
-  RateForm,
-} from "@/components/SettingsForms";
+import { CategoryManager, RateForm } from "@/components/SettingsForms";
 
 export const dynamic = "force-dynamic";
 
@@ -31,23 +29,11 @@ export default async function SettingsPage() {
             name: c.name,
             kind: c.kind,
             color: c.color,
-            monthlyBudgetMinor: c.monthlyBudgetMinor,
+            icon: c.icon,
             isSystem: c.isSystem,
           }))}
       />
 
-      <BudgetEditor
-        categories={categories
-          .filter((c) => !c.archivedAt)
-          .map((c) => ({
-            id: c.id,
-            name: c.name,
-            kind: c.kind,
-            color: c.color,
-            monthlyBudgetMinor: c.monthlyBudgetMinor,
-            isSystem: c.isSystem,
-          }))}
-      />
 
       <div className="panel px-4 py-4">
         <h2 className="font-semibold">Your data</h2>
@@ -74,17 +60,22 @@ export default async function SettingsPage() {
           <Link href="/people" className="btn btn-ghost flex-1">
             Manage people
           </Link>
+          <Link href="/budgets" className="btn btn-ghost flex-1">
+            Budgets
+          </Link>
         </div>
       </div>
 
       <form
         action={async () => {
           "use server";
-          await signOut({ redirectTo: "/signin" });
+          const jar = await cookies();
+          jar.delete(SESSION_COOKIE);
+          redirect("/unlock");
         }}
       >
         <button className="btn btn-ghost w-full" style={{ color: "var(--red)" }}>
-          <LogOut size={16} /> Sign out
+          <Lock size={16} /> Lock this device
         </button>
       </form>
     </div>

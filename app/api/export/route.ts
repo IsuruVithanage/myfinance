@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 import { db } from "@/lib/db";
 import {
   accounts,
@@ -22,9 +23,9 @@ function csvCell(value: unknown): string {
 }
 
 export async function GET(request: Request) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!(await verifySessionToken(process.env.AUTH_SECRET, token))) {
+    return NextResponse.json({ error: "Locked." }, { status: 401 });
   }
 
   const format = new URL(request.url).searchParams.get("format") ?? "json";
