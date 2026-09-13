@@ -1,10 +1,10 @@
 {
   "app": "myfinance",
   "formatVersion": 1,
-  "takenAt": "2026-09-13T10:35:50.779Z",
+  "takenAt": "2026-09-13T20:58:52.535Z",
   "counts": {
     "settings": 1,
-    "counterparties": 2,
+    "counterparties": 1,
     "categories": 32,
     "accounts": 6,
     "cardDetails": 0,
@@ -18,11 +18,11 @@
       {
         "id": 1,
         "baseCurrency": "LKR",
-        "fallbackUsdLkr": "328.000000",
+        "fallbackUsdLkr": "328.195300",
         "weeklyBudgetMinor": 1000000,
         "monthlyBudgetMinor": 5000000,
         "locale": "en-LK",
-        "updatedAt": "2026-09-13T07:43:09.715Z"
+        "updatedAt": "2026-09-13T13:34:37.592Z"
       }
     ],
     "counterparties": [
@@ -32,14 +32,6 @@
         "phone": "",
         "notes": "",
         "createdAt": "2026-09-13T07:35:23.350Z",
-        "archivedAt": null
-      },
-      {
-        "id": 2,
-        "name": "Savith",
-        "phone": "",
-        "notes": "",
-        "createdAt": "2026-09-13T07:35:51.848Z",
         "archivedAt": null
       }
     ],
@@ -698,8 +690,8 @@
         "date": "2026-09-13",
         "base": "USD",
         "quote": "LKR",
-        "rate": "328.00000000",
-        "source": "manual"
+        "rate": "328.19530000",
+        "source": "open.er-api.com"
       }
     ],
     "notifications": []
