@@ -58,6 +58,16 @@ export const settings = pgTable("settings", {
   fallbackUsdLkr: numeric("fallback_usd_lkr", { precision: 18, scale: 6 })
     .notNull()
     .default("300"),
+  /**
+   * Caps on total spending, independent of any category. 0 = not set.
+   * Stored in BASE currency minor units.
+   */
+  weeklyBudgetMinor: bigint("weekly_budget_minor", { mode: "number" })
+    .notNull()
+    .default(0),
+  monthlyBudgetMinor: bigint("monthly_budget_minor", { mode: "number" })
+    .notNull()
+    .default(0),
   locale: text("locale").notNull().default("en-LK"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

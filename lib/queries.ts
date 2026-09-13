@@ -595,6 +595,40 @@ export async function getBudgetStatus() {
   });
 }
 
+export type OverallBudget = Awaited<
+  ReturnType<typeof getOverallBudgets>
+>[number];
+
+/**
+ * Caps on total spending, ignoring categories entirely. "Spent" here is every
+ * expense in the window — including categories that have no budget of their
+ * own, which is the whole point of an overall cap.
+ */
+export async function getOverallBudgets() {
+  const cfg = await getSettings();
+
+  const periods = [
+    { period: "weekly" as const, budgetMinor: cfg.weeklyBudgetMinor },
+    { period: "monthly" as const, budgetMinor: cfg.monthlyBudgetMinor },
+  ];
+
+  return Promise.all(
+    periods.map(async ({ period, budgetMinor }) => {
+      const window = currentPeriod(period);
+      const totals = await getPeriodTotals(window.from, window.to);
+      return {
+        period,
+        budgetMinor,
+        window,
+        spentMinor: totals.expense,
+        remainingMinor: budgetMinor - totals.expense,
+        ratio: budgetMinor > 0 ? totals.expense / budgetMinor : 0,
+        pace: periodProgress(period),
+      };
+    }),
+  );
+}
+
 /* ────────────────────────────  people  ───────────────────────────── */
 
 export async function getPeopleOverview() {

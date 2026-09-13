@@ -4,6 +4,7 @@ import { notifications, transactions } from "@/lib/db/schema";
 import {
   getBudgetStatus,
   getCardsOverview,
+  getOverallBudgets,
   getPeopleOverview,
 } from "@/lib/queries";
 import { formatMoney } from "@/lib/money";
@@ -93,6 +94,25 @@ export async function refreshNotifications(force = false) {
       // Keyed by the period window, so a weekly alert can fire again next week.
       dedupeKey: `budget:${b.id}:${b.window.from}`,
       href: `/budgets`,
+    });
+  }
+
+  /* ── overall spending caps ─────────────────────────────────────── */
+  for (const o of await getOverallBudgets()) {
+    if (o.budgetMinor <= 0 || o.ratio < 0.8) continue;
+    const window = o.period === "weekly" ? "this week" : "this month";
+    drafts.push({
+      kind: "overall_budget",
+      severity: o.ratio >= 1 ? "urgent" : "warn",
+      title:
+        o.ratio >= 1
+          ? `Over your ${o.period === "weekly" ? "weekly" : "monthly"} limit`
+          : `${Math.round(o.ratio * 100)}% of your ${o.period === "weekly" ? "weekly" : "monthly"} limit`,
+      body:
+        `${formatMoney(o.spentMinor, BASE_CURRENCY)} of ` +
+        `${formatMoney(o.budgetMinor, BASE_CURRENCY)} spent ${window}.`,
+      dedupeKey: `overall_budget:${o.period}:${o.window.from}`,
+      href: "/budgets",
     });
   }
 

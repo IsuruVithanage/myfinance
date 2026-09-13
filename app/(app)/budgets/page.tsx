@@ -1,16 +1,20 @@
-import { getBudgetStatus, getCategories } from "@/lib/queries";
-import { currentPeriod } from "@/lib/budget";
+import {
+  getBudgetStatus,
+  getCategories,
+  getOverallBudgets,
+} from "@/lib/queries";
 import { BASE_CURRENCY } from "@/lib/money";
-import { Money, PageHeader, Ring } from "@/components/ui";
-import { formatMoney } from "@/lib/money";
+import { Money, PageHeader } from "@/components/ui";
 import BudgetManager, { type BudgetRow } from "@/components/BudgetManager";
+import OverallBudget from "@/components/OverallBudget";
 
 export const dynamic = "force-dynamic";
 
 export default async function BudgetsPage() {
-  const [categories, status] = await Promise.all([
+  const [categories, status, overall] = await Promise.all([
     getCategories("expense"),
     getBudgetStatus(),
+    getOverallBudgets(),
   ]);
 
   const byId = new Map(status.map((s) => [s.id, s]));
@@ -38,92 +42,50 @@ export default async function BudgetsPage() {
         : b.budgetMinor - a.budgetMinor,
     );
 
-  const weekly = status.filter((s) => s.period === "weekly");
-  const monthly = status.filter((s) => s.period === "monthly");
-
-  const sum = (list: typeof status, key: "budgetMinor" | "spentMinor") =>
-    list.reduce((t, s) => t + s[key], 0);
-
-  const groups = [
-    { label: "This week", list: weekly, window: currentPeriod("weekly") },
-    { label: "This month", list: monthly, window: currentPeriod("monthly") },
-  ].filter((g) => g.list.length > 0);
+  const categoryTotal = status.reduce((t, s) => t + s.budgetMinor, 0);
 
   return (
     <div>
       <PageHeader
         title="Budgets"
-        subtitle="Set an amount per category, weekly or monthly."
+        subtitle="A limit on everything, and one per category if you want it."
       />
 
-      {groups.length > 0 && (
-        <div className="mb-6 grid gap-3">
-          {groups.map((g) => {
-            const budget = sum(g.list, "budgetMinor");
-            const spent = sum(g.list, "spentMinor");
-            const ratio = budget > 0 ? spent / budget : 0;
-            return (
-              <section
-                key={g.label}
-                className="panel flex items-center gap-4 px-5 py-4"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="eyebrow">{g.label}</p>
-                  <p className="num mt-1 text-[1.4rem] font-bold leading-none">
-                    <Money
-                      minor={spent}
-                      currency={BASE_CURRENCY}
-                      tone={ratio >= 1 ? "neg" : "plain"}
-                      trimZeros
-                    />
-                  </p>
-                  <p className="muted mt-1 text-[0.78rem]">
-                    of{" "}
-                    <Money
-                      minor={budget}
-                      currency={BASE_CURRENCY}
-                      tone="muted"
-                      trimZeros
-                    />{" "}
-                    across {g.list.length}{" "}
-                    {g.list.length === 1 ? "category" : "categories"}
-                  </p>
-                </div>
+      <h2 className="eyebrow mb-2.5">Overall limit</h2>
+      <OverallBudget
+        rows={overall.map((o) => ({
+          period: o.period,
+          budgetMinor: o.budgetMinor,
+          spentMinor: o.spentMinor,
+          ratio: o.ratio,
+          pace: o.pace,
+        }))}
+      />
+      <p className="muted mt-2.5 px-1 text-[0.78rem]">
+        Counts every expense, including categories with no budget of their own.
+        Weeks run Monday to Sunday.
+      </p>
 
-                <Ring
-                  value={ratio}
-                  tone={ratio >= 1 ? "neg" : "pos"}
-                  size={74}
-                  thickness={7}
-                >
-                  <span className="num block text-[0.8rem] font-bold">
-                    {Math.round(ratio * 100)}%
-                  </span>
-                  <span className="muted mt-0.5 block text-[0.55rem] font-semibold uppercase tracking-wider">
-                    used
-                  </span>
-                </Ring>
-              </section>
-            );
-          })}
-        </div>
-      )}
-
-      <h2 className="eyebrow mb-2.5">All spending categories</h2>
+      <div className="mb-2.5 mt-8 flex items-baseline justify-between">
+        <h2 className="eyebrow">By category</h2>
+        {categoryTotal > 0 && (
+          <span className="muted text-[0.78rem]">
+            <Money
+              minor={categoryTotal}
+              currency={BASE_CURRENCY}
+              tone="muted"
+              trimZeros
+            />{" "}
+            allocated
+          </span>
+        )}
+      </div>
       <BudgetManager rows={rows} />
 
       <p className="muted mt-4 text-center text-xs">
-        Leave an amount blank for no budget. You are warned at 80% and again when
-        you go over — weekly budgets reset every Monday.
+        Leave an amount blank for no budget. You are warned at 80% and again
+        when you go over.
       </p>
-
-      {status.length === 0 && (
-        <p className="muted mt-2 text-center text-xs">
-          Nothing budgeted yet. Try{" "}
-          {formatMoney(2500000, BASE_CURRENCY, { trimZeros: true })} a month on
-          Groceries to start.
-        </p>
-      )}
     </div>
   );
 }

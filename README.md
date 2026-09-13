@@ -1,8 +1,9 @@
 # MyFinance
 
 A single-user finance app: multiple accounts in **LKR and USD**, credit cards with
-due-date alerts, money lent and borrowed, transaction fees, weekly or monthly
-budgets, and categorised spending and income. Mobile-first, installable as a
+due-date alerts, money lent and borrowed, transaction fees, an overall spending
+limit plus per-category budgets (weekly or monthly), and categorised spending
+and income. Mobile-first, installable as a
 PWA, deployable free.
 
 ---

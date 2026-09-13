@@ -579,6 +579,36 @@ export async function removeTransaction(id: number): Promise<ActionResult> {
   }
 }
 
+/** A cap on total spending for a week or a month. 0 clears it. */
+export async function setOverallBudget(
+  period: "weekly" | "monthly",
+  amountMinor: number,
+): Promise<ActionResult> {
+  try {
+    await requireSession();
+    if (amountMinor < 0) return { ok: false, error: "Enter a positive amount." };
+
+    const column =
+      period === "weekly"
+        ? { weeklyBudgetMinor: amountMinor }
+        : { monthlyBudgetMinor: amountMinor };
+
+    await db
+      .insert(settings)
+      .values({ id: 1, ...column })
+      .onConflictDoUpdate({
+        target: settings.id,
+        set: { ...column, updatedAt: new Date() },
+      });
+
+    refreshAll();
+    revalidatePath("/budgets");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 /* ─────────────────────────── fx & settings ───────────────────────── */
 
 export async function setUsdLkrRate(
