@@ -1,7 +1,7 @@
 {
   "app": "myfinance",
   "formatVersion": 1,
-  "takenAt": "2026-09-13T09:16:23.760Z",
+  "takenAt": "2026-09-13T10:35:50.779Z",
   "counts": {
     "settings": 1,
     "counterparties": 2,
@@ -201,19 +201,6 @@
         "archivedAt": null
       },
       {
-        "id": 14,
-        "name": "Household",
-        "kind": "expense",
-        "parentId": null,
-        "icon": "sofa",
-        "color": "#84cc16",
-        "budgetMinor": 0,
-        "budgetPeriod": "monthly",
-        "isSystem": false,
-        "sortOrder": 13,
-        "archivedAt": null
-      },
-      {
         "id": 15,
         "name": "Personal Care",
         "kind": "expense",
@@ -237,19 +224,6 @@
         "budgetPeriod": "monthly",
         "isSystem": false,
         "sortOrder": 15,
-        "archivedAt": null
-      },
-      {
-        "id": 17,
-        "name": "Insurance",
-        "kind": "expense",
-        "parentId": null,
-        "icon": "shield",
-        "color": "#475569",
-        "budgetMinor": 0,
-        "budgetPeriod": "monthly",
-        "isSystem": false,
-        "sortOrder": 16,
         "archivedAt": null
       },
       {
@@ -459,6 +433,32 @@
         "isSystem": false,
         "sortOrder": 3,
         "archivedAt": "2026-09-13T09:16:15.740Z"
+      },
+      {
+        "id": 14,
+        "name": "Household",
+        "kind": "expense",
+        "parentId": null,
+        "icon": "sofa",
+        "color": "#84cc16",
+        "budgetMinor": 0,
+        "budgetPeriod": "monthly",
+        "isSystem": false,
+        "sortOrder": 13,
+        "archivedAt": "2026-09-13T09:16:33.691Z"
+      },
+      {
+        "id": 17,
+        "name": "Insurance",
+        "kind": "expense",
+        "parentId": null,
+        "icon": "shield",
+        "color": "#475569",
+        "budgetMinor": 0,
+        "budgetPeriod": "monthly",
+        "isSystem": false,
+        "sortOrder": 16,
+        "archivedAt": "2026-09-13T09:16:44.096Z"
       }
     ],
     "accounts": [
