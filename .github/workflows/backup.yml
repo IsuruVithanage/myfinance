@@ -1,11 +1,20 @@
 name: Nightly database backup
 
-# Your data lives on Neon's free tier. This keeps a second, independent copy
-# inside this repository so a lost account or a bad delete is recoverable.
+# Your data lives on Neon. This keeps independent, dated copies inside this
+# private repository, so losing the Neon project — or a bad delete — is
+# recoverable.
+#
+# Deliberately not pg_dump: that tool refuses to dump a server newer than
+# itself, so a pinned client version starts failing silently the day Neon
+# upgrades Postgres. `npm run backup` only needs Node.
 on:
   schedule:
     - cron: "30 18 * * *" # 00:00 Sri Lanka time (UTC+5:30)
   workflow_dispatch: {}
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
 
 jobs:
   dump:
@@ -15,23 +24,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install PostgreSQL client
-        run: |
-          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
-          sudo apt-get update -qq
-          sudo apt-get install -y postgresql-client-17
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
 
-      - name: Dump database
+      - run: npm ci
+
+      - name: Export every table
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          mkdir -p backups
-          pg_dump --no-owner --no-privileges "$DATABASE_URL" | gzip > "backups/myfinance-$(date -u +%Y-%m-%d).sql.gz"
-          # keep the last 30 nights only, so the repo stays small
-          ls -1t backups/*.sql.gz | tail -n +31 | xargs -r rm --
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL secret is not set — no backup was taken."
+            exit 1
+          fi
+          npm run backup
 
-      - name: Commit the backup
+      - name: Keep the last 30 nights
+        run: ls -1t backups/*.json | tail -n +31 | xargs -r rm --
+
+      - name: Commit
         run: |
           git config user.name "backup-bot"
           git config user.email "backup-bot@users.noreply.github.com"

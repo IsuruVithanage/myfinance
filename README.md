@@ -140,12 +140,31 @@ key, and rotate `AUTH_SECRET` to revoke every device at once.
 
 Three independent layers, all free:
 
-1. **Neon** keeps point-in-time restore on its free tier.
-2. **`.github/workflows/backup.yml`** dumps the database into `backups/` nightly
-   and keeps the last 30 days. Add `DATABASE_URL` as a repository secret to turn
-   it on.
-3. **Settings → Your data** exports a full JSON backup or a CSV of every posting,
-   on demand.
+1. **Neon** keeps point-in-time restore on its free tier — good for "I deleted
+   the wrong thing an hour ago", not for losing the account itself.
+2. **`.github/workflows/backup.yml`** runs `npm run backup` nightly and commits
+   dated JSON into `backups/`, keeping the last 30. Add `DATABASE_URL` as a
+   repository secret to turn it on.
+3. **Settings → Your data** exports JSON or CSV on demand.
+
+### Restoring
+
+The restore path is tested, not assumed:
+
+```bash
+npm run db:migrate                                   # schema first
+npx tsx scripts/restore.ts backups/myfinance-YYYY-MM-DD.json
+```
+
+It refuses to overwrite a database that already holds transactions unless you
+pass `OVERWRITE=yes`, runs inside one transaction so a failure leaves nothing
+half-written, and fast-forwards every sequence so the next insert cannot
+collide with a restored row.
+
+Backups are **not** pg_dump. `pg_dump` refuses to dump a server newer than
+itself, so a pinned client version fails silently the day the provider upgrades
+Postgres — exactly when you would not notice. `npm run backup` only needs Node,
+so it cannot drift out of step with the server.
 
 ---
 
