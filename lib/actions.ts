@@ -27,6 +27,12 @@ import {
   updateSimpleTransaction,
 } from "@/lib/ledger";
 import { refreshNotifications } from "@/lib/notifications";
+import {
+  PeopleError,
+  deleteAccount as deleteAccountRow,
+  deleteCounterparty,
+  mergeCounterparties,
+} from "@/lib/people";
 import { cookies } from "next/headers";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
 
@@ -43,7 +49,8 @@ async function requireSession() {
 }
 
 function fail(e: unknown): ActionResult {
-  if (e instanceof LedgerError) return { ok: false, error: e.message };
+  if (e instanceof LedgerError || e instanceof PeopleError)
+    return { ok: false, error: e.message };
   const message = e instanceof Error ? e.message : "Something went wrong.";
   console.error("[action]", e);
   return { ok: false, error: message };
@@ -209,6 +216,48 @@ export async function savePerson(input: {
       .returning();
     refreshAll();
     return { ok: true, id: row.id };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Fold a duplicate person into the one you are keeping. */
+export async function mergePeople(
+  fromId: number,
+  intoId: number,
+): Promise<ActionResult> {
+  try {
+    await requireSession();
+    const r = await mergeCounterparties(fromId, intoId);
+    refreshAll();
+    revalidatePath("/people");
+    return { ok: true, id: intoId, ...r } as ActionResult;
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Remove a person. Refused if anything still references them. */
+export async function removePerson(id: number): Promise<ActionResult> {
+  try {
+    await requireSession();
+    await deleteCounterparty(id);
+    refreshAll();
+    revalidatePath("/people");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Permanently remove an account. Refused once postings exist. */
+export async function removeAccount(id: number): Promise<ActionResult> {
+  try {
+    await requireSession();
+    await deleteAccountRow(id);
+    refreshAll();
+    revalidatePath("/accounts");
+    return { ok: true };
   } catch (e) {
     return fail(e);
   }

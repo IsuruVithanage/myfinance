@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
-import { saveAccount, setAccountActive } from "@/lib/actions";
+import { Loader2, Trash2 } from "lucide-react";
+import { removeAccount, saveAccount, setAccountActive } from "@/lib/actions";
 import { toMinor } from "@/lib/money";
 import type { Currency } from "@/lib/db/schema";
 
@@ -64,13 +64,17 @@ export default function AccountForm({
   initial,
   /** Existing accounts can't change currency once they hold transactions. */
   lockCurrency = false,
+  /** How many postings have touched it — deletion is only safe at zero. */
+  postingCount = 0,
 }: {
   initial: AccountFormValues;
   lockCurrency?: boolean;
+  postingCount?: number;
 }) {
   const router = useRouter();
   const [v, setV] = useState(initial);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [pending, start] = useTransition();
 
   const set = <K extends keyof AccountFormValues>(
@@ -359,18 +363,76 @@ export default function AccountForm({
       </button>
 
       {v.id && (
-        <button
-          onClick={() =>
-            start(async () => {
-              await setAccountActive(v.id!, !(v.isActive ?? true));
-              router.push("/accounts");
-              router.refresh();
-            })
-          }
-          className="btn btn-ghost w-full"
-        >
-          {v.isActive === false ? "Restore account" : "Archive account"}
-        </button>
+        <>
+          <button
+            onClick={() =>
+              start(async () => {
+                await setAccountActive(v.id!, !(v.isActive ?? true));
+                router.push("/accounts");
+                router.refresh();
+              })
+            }
+            className="btn btn-ghost w-full"
+          >
+            {v.isActive === false ? "Restore account" : "Archive account"}
+          </button>
+          <p className="muted text-center text-xs">
+            Archiving hides it and leaves every transaction intact.
+          </p>
+
+          {/* Deleting is only offered when nothing would be lost by it. */}
+          {postingCount === 0 ? (
+            confirmingDelete ? (
+              <div className="panel px-4 py-4 text-center">
+                <p className="text-sm font-semibold">Delete {v.name}?</p>
+                <p className="muted mt-1 text-xs">
+                  Nothing has moved through it, so nothing is lost.
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={() => setConfirmingDelete(false)}
+                    className="btn btn-ghost flex-1"
+                  >
+                    Keep it
+                  </button>
+                  <button
+                    disabled={pending}
+                    className="btn btn-primary flex-1"
+                    style={{ background: "var(--red)" }}
+                    onClick={() =>
+                      start(async () => {
+                        const r = await removeAccount(v.id!);
+                        if (r.ok) {
+                          router.push("/accounts");
+                          router.refresh();
+                        } else setError(r.error);
+                      })
+                    }
+                  >
+                    {pending ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      "Delete"
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmingDelete(true)}
+                className="btn btn-danger w-full"
+              >
+                <Trash2 size={16} /> Delete permanently
+              </button>
+            )
+          ) : (
+            <p className="muted text-center text-xs">
+              {postingCount} transaction{postingCount === 1 ? "" : "s"} moved
+              through this account, so it can&apos;t be deleted — that would
+              unbalance them. Archive it instead.
+            </p>
+          )}
+        </>
       )}
     </div>
   );

@@ -83,6 +83,8 @@ export default async function PeoplePage() {
             {people.map((p) => (
               <Row
                 key={p.person.id}
+                href={`/people/${p.person.id}`}
+                chevron
                 title={p.person.name}
                 subtitle={
                   p.netBase > 0

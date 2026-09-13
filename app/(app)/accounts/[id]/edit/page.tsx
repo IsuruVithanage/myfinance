@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getAccount } from "@/lib/queries";
+import { accountUsage } from "@/lib/people";
 import { fromMinor } from "@/lib/money";
 import { PageHeader } from "@/components/ui";
 import AccountForm, { type AccountFormValues } from "@/components/AccountForm";
@@ -14,6 +15,7 @@ export default async function EditAccountPage({
   const { id } = await params;
   const account = await getAccount(Number(id));
   if (!account) notFound();
+  const usage = await accountUsage(account.id);
   if (account.type === "receivable" || account.type === "payable") notFound();
 
   const initial: AccountFormValues = {
@@ -40,7 +42,7 @@ export default async function EditAccountPage({
   return (
     <div>
       <PageHeader title="Edit account" subtitle={account.name} />
-      <AccountForm initial={initial} />
+      <AccountForm initial={initial} postingCount={usage.postings} />
     </div>
   );
 }
