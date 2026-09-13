@@ -2,17 +2,31 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, Plus, Trash2, X } from "lucide-react";
-import { archiveCategory, saveCategory, setUsdLkrRate } from "@/lib/actions";
+import { Check, Download, Loader2, Plus, Trash2, X } from "lucide-react";
+import {
+  archiveCategory,
+  refreshFxRate,
+  saveCategory,
+  setUsdLkrRate,
+} from "@/lib/actions";
 
 
 /** The USD→LKR rate used to value USD balances and to convert new entries. */
-export function RateForm({ current }: { current: number }) {
+export function RateForm({
+  current,
+  source,
+  asOf,
+}: {
+  current: number;
+  source?: string;
+  asOf?: string | null;
+}) {
   const router = useRouter();
   const [rate, setRate] = useState(String(current));
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const [fetching, startFetch] = useTransition();
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -20,8 +34,39 @@ export function RateForm({ current }: { current: number }) {
     <div className="panel px-4 py-4">
       <h2 className="font-semibold">Exchange rate</h2>
       <p className="muted mt-0.5 text-sm">
-        LKR per 1 USD. Used to show USD balances in rupees. Past transactions
-        keep the rate they were recorded at.
+        LKR per 1 USD, used to value USD balances. Past transactions keep the
+        rate they were actually recorded at, so this never rewrites history.
+      </p>
+
+      <button
+        className="btn btn-ghost mt-3 w-full"
+        disabled={fetching}
+        onClick={() =>
+          startFetch(async () => {
+            setError(null);
+            const r = await refreshFxRate();
+            if (r.ok) {
+              setSaved(false);
+              router.refresh();
+            } else setError(r.error);
+          })
+        }
+      >
+        {fetching ? (
+          <Loader2 size={16} className="animate-spin" />
+        ) : (
+          <>
+            <Download size={15} /> Fetch live rate
+          </>
+        )}
+      </button>
+
+      <p className="muted mt-2 text-xs">
+        {source && source !== "manual"
+          ? `Currently ${current} from ${source}${asOf ? ` on ${asOf}` : ""}.`
+          : "Currently set by hand."}{" "}
+        Feeds publish the market rate — a bank will give you a few percent less,
+        so record what you actually got when you exchange.
       </p>
       <div className="mt-3 flex gap-2">
         <input

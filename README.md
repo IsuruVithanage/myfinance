@@ -47,6 +47,10 @@ Each account holds exactly one currency. The split that matters:
   spending.
 - An **exchange** records what left and what arrived; the rate you actually got
   is implied by those two numbers, not by a published mid-market figure.
+- The **live rate** is pulled once a day from free, key-less feeds
+  (`open.er-api.com`, falling back to `currency-api`) and is used only to value
+  USD balances. It is a market rate — a bank gives a few percent less — and a
+  rate you set by hand wins for the rest of that day.
 
 ---
 
@@ -205,6 +209,7 @@ lib/
   queries.ts        every read the UI does
   cards.ts          statement cycle and due-date maths
   fx.ts             rate lookup and conversion
+  fx-feed.ts        daily live USD→LKR, with fallback and sanity bounds
   money.ts          minor units, parsing, one formatter
   session.ts        passcode check and signed session cookie
   budget.ts         weekly/monthly periods and range scaling

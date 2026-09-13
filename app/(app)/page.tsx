@@ -5,7 +5,7 @@ import {
   startOfMonth,
   subMonths,
 } from "date-fns";
-import { ChartPie, PiggyBank, Plus, Receipt, Users } from "lucide-react";
+import { ChartPie, PiggyBank, Plus, Receipt, RefreshCw, Users } from "lucide-react";
 import {
   getAccountsWithBalances,
   getCardsOverview,
@@ -15,6 +15,7 @@ import {
   getTransactions,
 } from "@/lib/queries";
 import { iso } from "@/lib/cards";
+import { currentRateInfo, refreshUsdLkrRate } from "@/lib/fx-feed";
 import { BASE_CURRENCY, formatMoney } from "@/lib/money";
 import { iconFor, iconForAccountType } from "@/lib/icons";
 import {
@@ -44,7 +45,11 @@ export default async function DashboardPage() {
   const to = iso(endOfMonth(today));
   const lastMonth = subMonths(today, 1);
 
-  const [netWorth, totals, lastTotals, accounts, cards, topSpend, recent] =
+  // Pull the day's rate before valuing anything. Never throws — if the feed is
+  // unreachable the stored rate simply stays in force.
+  await refreshUsdLkrRate();
+
+  const [netWorth, totals, lastTotals, accounts, cards, topSpend, recent, rate] =
     await Promise.all([
       getNetWorth(),
       getPeriodTotals(from, to),
@@ -53,6 +58,7 @@ export default async function DashboardPage() {
       getCardsOverview(),
       getCategoryBreakdown(from, to, "expense"),
       getTransactions({ limit: 5 }),
+      currentRateInfo(),
     ]);
 
   const spendable = accounts.filter((a) =>
@@ -82,16 +88,37 @@ export default async function DashboardPage() {
           })}
         </p>
         {netWorth.byCurrency.USD !== 0 && (
-          <p className="muted num mt-1.5 text-[0.8rem]">
-            LKR{" "}
-            {(netWorth.byCurrency.LKR / 100).toLocaleString("en-US", {
-              maximumFractionDigits: 0,
-            })}
-            {"  ·  USD "}
-            {(netWorth.byCurrency.USD / 100).toLocaleString("en-US", {
-              maximumFractionDigits: 0,
-            })}
-          </p>
+          <>
+            <p className="muted num mt-1.5 text-[0.8rem]">
+              LKR{" "}
+              {(netWorth.byCurrency.LKR / 100).toLocaleString("en-US", {
+                maximumFractionDigits: 0,
+              })}
+              {"  ·  USD "}
+              {(netWorth.byCurrency.USD / 100).toLocaleString("en-US", {
+                maximumFractionDigits: 0,
+              })}
+            </p>
+
+            {/* What the USD figure above was converted at, and how current it
+                is — a valuation you cannot see the rate for is not much use. */}
+            <Link
+              href="/settings"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.72rem]"
+              style={{ background: "var(--surface-2)" }}
+            >
+              <RefreshCw size={11} className="pos" />
+              <span className="num">$1 = Rs {rate.rate.toFixed(2)}</span>
+              <span className="faint">
+                ·{" "}
+                {rate.source === "manual"
+                  ? "set by you"
+                  : rate.date === iso(today)
+                    ? "live today"
+                    : rate.date}
+              </span>
+            </Link>
+          </>
         )}
 
         {/* nested card, one step lighter, exactly like a wallet app */}

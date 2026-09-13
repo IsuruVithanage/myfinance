@@ -3,23 +3,24 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SESSION_COOKIE } from "@/lib/session";
 import { Download, Lock } from "lucide-react";
-import { getCategories, getSettings } from "@/lib/queries";
+import { getCategories } from "@/lib/queries";
+import { currentRateInfo } from "@/lib/fx-feed";
 import { PageHeader } from "@/components/ui";
 import { CategoryManager, RateForm } from "@/components/SettingsForms";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const [settings, categories] = await Promise.all([
-    getSettings(),
+  const [categories, rate] = await Promise.all([
     getCategories(),
+    currentRateInfo(),
   ]);
 
   return (
     <div className="space-y-4">
       <PageHeader title="Settings" />
 
-      <RateForm current={Number(settings.fallbackUsdLkr)} />
+      <RateForm current={rate.rate} source={rate.source} asOf={rate.date} />
 
       <CategoryManager
         categories={categories

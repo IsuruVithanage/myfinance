@@ -27,6 +27,7 @@ import {
   updateSimpleTransaction,
 } from "@/lib/ledger";
 import { refreshNotifications } from "@/lib/notifications";
+import { refreshUsdLkrRate } from "@/lib/fx-feed";
 import {
   PeopleError,
   deleteAccount as deleteAccountRow,
@@ -682,6 +683,25 @@ export async function setUsdLkrRate(
         set: { fallbackUsdLkr: String(rate), updatedAt: new Date() },
       });
     refreshAll();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Pull the live USD→LKR rate now, ignoring the once-a-day throttle. */
+export async function refreshFxRate(): Promise<ActionResult> {
+  try {
+    await requireSession();
+    const result = await refreshUsdLkrRate({ force: true });
+    if (!result) {
+      return {
+        ok: false,
+        error: "Couldn't reach the rate providers. The saved rate is still in use.",
+      };
+    }
+    refreshAll();
+    revalidatePath("/settings");
     return { ok: true };
   } catch (e) {
     return fail(e);
