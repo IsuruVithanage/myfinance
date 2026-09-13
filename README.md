@@ -160,10 +160,15 @@ Three independent layers, all free:
 | `npm run db:migrate` | Apply migrations |
 | `npm run db:studio` | Browse the database |
 | `npm run seed` | Settings, default categories, opening FX rate |
-| `npx tsx scripts/verify-ledger.ts` | **Wipes transactional data**, then replays every transaction type and asserts balances, invariants and reports |
+| `npx tsx scripts/verify-ledger.ts` | **Wipes transactional data**, then replays every transaction type and asserts balances, invariants and reports. Refuses to run against a non-local database. |
 
 `verify-ledger` is the safety net: run it against a scratch database after any
-change to `lib/ledger.ts`.
+change to `lib/ledger.ts`. It aborts if `DATABASE_URL` is not local, so it
+cannot destroy production by accident:
+
+```bash
+DATABASE_URL="postgresql://postgres@127.0.0.1:5432/scratch" npx tsx scripts/verify-ledger.ts
+```
 
 ---
 

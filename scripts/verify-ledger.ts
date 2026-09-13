@@ -26,6 +26,48 @@ import {
 } from "../lib/queries";
 import { formatMoney } from "../lib/money";
 
+/**
+ * This script deletes every transaction, posting and account before replaying
+ * its fixtures. That is fine against a scratch database and catastrophic
+ * against a real one, so refuse to run anywhere that is not obviously local
+ * unless the caller says so out loud.
+ */
+function guardAgainstRealData() {
+  const url = process.env.DATABASE_URL ?? "";
+  const local =
+    url.includes("@localhost") ||
+    url.includes("@127.0.0.1") ||
+    url.includes("sslmode=disable");
+
+  if (local || process.env.I_KNOW_THIS_WIPES_DATA === "yes") return;
+
+  const host = (() => {
+    try {
+      return new URL(url).host;
+    } catch {
+      return "(unparseable)";
+    }
+  })();
+
+  console.error(
+    [
+      "",
+      "  Refusing to run: this wipes all transactional data.",
+      `  DATABASE_URL points at ${host}, which is not a local database.`,
+      "",
+      "  Run it against a scratch database instead:",
+      "    DATABASE_URL='postgresql://…/scratch' npx tsx scripts/verify-ledger.ts",
+      "",
+      "  If you genuinely mean to wipe that database, set",
+      "    I_KNOW_THIS_WIPES_DATA=yes",
+      "",
+    ].join("\n"),
+  );
+  process.exit(1);
+}
+
+guardAgainstRealData();
+
 let failures = 0;
 
 function check(label: string, actual: number, expected: number) {
