@@ -34,18 +34,26 @@ export async function getSettings() {
 
 /* ─────────────────────────────  accounts  ────────────────────────── */
 
-/** Balance = opening balance + every posting that touched the account. */
-const accountDeltas = db
-  .select({
-    accountId: postings.accountId,
-    delta: sql<number>`coalesce(sum(${postings.amountMinor}), 0)`
-      .mapWith(Number)
-      .as("delta"),
-  })
-  .from(postings)
-  .where(isNotNull(postings.accountId))
-  .groupBy(postings.accountId)
-  .as("account_deltas");
+/**
+ * Balance = opening balance + every posting that touched the account.
+ *
+ * Built per call rather than once at module scope: a module-level query
+ * touches the database handle the moment the file is imported, which makes
+ * `next build` require a live DATABASE_URL just to collect route data.
+ */
+function accountDeltasSubquery() {
+  return db
+    .select({
+      accountId: postings.accountId,
+      delta: sql<number>`coalesce(sum(${postings.amountMinor}), 0)`
+        .mapWith(Number)
+        .as("delta"),
+    })
+    .from(postings)
+    .where(isNotNull(postings.accountId))
+    .groupBy(postings.accountId)
+    .as("account_deltas");
+}
 
 export type AccountWithBalance = Awaited<
   ReturnType<typeof getAccountsWithBalances>
@@ -54,6 +62,7 @@ export type AccountWithBalance = Awaited<
 export async function getAccountsWithBalances(opts?: { includeArchived?: boolean }) {
   const rate = await getUsdLkrRate(iso(new Date()));
 
+  const accountDeltas = accountDeltasSubquery();
   const rows = await db
     .select({
       account: accounts,

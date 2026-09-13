@@ -5,6 +5,14 @@ import { refreshNotifications } from "@/lib/notifications";
 import BottomNav, { SideNav } from "@/components/BottomNav";
 import AlertBell from "@/components/AlertBell";
 
+/**
+ * Every screen behind the passcode is per-request: it reads the session cookie
+ * and live balances. Marking the shell dynamic keeps any of them from being
+ * prerendered or cached — financial figures should never be served from a
+ * build-time snapshot.
+ */
+export const dynamic = "force-dynamic";
+
 export default async function AppLayout({
   children,
 }: {
