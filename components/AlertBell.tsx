@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Bell, RefreshCw, X } from "lucide-react";
 import type { Notification } from "@/lib/db/schema";
@@ -37,7 +38,13 @@ export default function AlertBell({ alerts }: { alerts: Notification[] }) {
         )}
       </button>
 
-      {open && (
+      {/*
+        Portalled to <body>: the header's backdrop-filter makes it the
+        containing block for anything position:fixed inside it, which pinned
+        this "full-screen" sheet to a 52px-tall header and pushed it up under
+        the phone's status bar.
+      */}
+      {open && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
           style={{ background: "rgb(0 0 0 / 0.4)" }}
@@ -129,7 +136,8 @@ export default function AlertBell({ alerts }: { alerts: Notification[] }) {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
