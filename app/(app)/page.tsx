@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { after } from "next/server";
 import {
   endOfMonth,
   format,
@@ -45,9 +46,14 @@ export default async function DashboardPage() {
   const to = iso(endOfMonth(today));
   const lastMonth = subMonths(today, 1);
 
-  // Pull the day's rate before valuing anything. Never throws — if the feed is
-  // unreachable the stored rate simply stays in force.
-  await refreshUsdLkrRate();
+  /**
+   * Fetch the day's rate after the response is sent rather than in front of
+   * it: the feeds allow six seconds each before timing out, which is far too
+   * long to hold the dashboard for. The first load of a day values balances at
+   * yesterday's rate and the next one uses today's — a difference of a
+   * fraction of a percent, invisible against a 40-second wait.
+   */
+  after(() => refreshUsdLkrRate());
 
   const [netWorth, totals, lastTotals, accounts, cards, topSpend, recent, rate] =
     await Promise.all([

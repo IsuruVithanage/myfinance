@@ -42,8 +42,33 @@ export async function refreshNotifications(force = false) {
   const drafts: Draft[] = [];
   const today = new Date();
 
+  /**
+   * The four sources are independent, so fetch them together. Sequentially
+   * this was nine round trips to the database on every cold page load.
+   */
+  const [cards, budgets, overall, overdueLoans] = await Promise.all([
+    getCardsOverview(),
+    getBudgetStatus(),
+    getOverallBudgets(),
+    db
+      .select({
+        id: transactions.id,
+        date: transactions.date,
+        expectedOn: transactions.expectedOn,
+        counterpartyId: transactions.counterpartyId,
+        description: transactions.description,
+      })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.type, "lend"),
+          isNotNull(transactions.expectedOn),
+          lte(transactions.expectedOn, iso(today)),
+        ),
+      ),
+  ]);
+
   /* ── credit card due dates ─────────────────────────────────────── */
-  const cards = await getCardsOverview();
   for (const c of cards) {
     const days = c.cycle.daysUntilDue;
     if (!c.settled && days <= c.cardDetail.alertDaysBefore) {
@@ -78,7 +103,7 @@ export async function refreshNotifications(force = false) {
   }
 
   /* ── budgets, each against its own week or month ───────────────── */
-  for (const b of await getBudgetStatus()) {
+  for (const b of budgets) {
     if (b.ratio < 0.8) continue;
     drafts.push({
       kind: "budget",
@@ -98,7 +123,7 @@ export async function refreshNotifications(force = false) {
   }
 
   /* ── overall spending caps ─────────────────────────────────────── */
-  for (const o of await getOverallBudgets()) {
+  for (const o of overall) {
     if (o.budgetMinor <= 0 || o.ratio < 0.8) continue;
     const window = o.period === "weekly" ? "this week" : "this month";
     drafts.push({
@@ -117,23 +142,6 @@ export async function refreshNotifications(force = false) {
   }
 
   /* ── loans past their expected return date ─────────────────────── */
-  const overdueLoans = await db
-    .select({
-      id: transactions.id,
-      date: transactions.date,
-      expectedOn: transactions.expectedOn,
-      counterpartyId: transactions.counterpartyId,
-      description: transactions.description,
-    })
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.type, "lend"),
-        isNotNull(transactions.expectedOn),
-        lte(transactions.expectedOn, iso(today)),
-      ),
-    );
-
   if (overdueLoans.length) {
     const people = await getPeopleOverview();
     const stillOwing = new Map(

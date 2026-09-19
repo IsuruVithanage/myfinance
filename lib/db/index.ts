@@ -43,7 +43,9 @@ function createPool() {
 
   return new Pool({
     connectionString: cleaned,
-    max: 3,
+    // The dashboard fans out a dozen queries at once; three connections
+    // serialised that into waves. Neon's pooler absorbs this comfortably.
+    max: 6,
     idleTimeoutMillis: 10_000,
     connectionTimeoutMillis: 10_000,
     /**

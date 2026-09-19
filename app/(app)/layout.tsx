@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { after } from "next/server";
 import { Settings as SettingsIcon } from "lucide-react";
 import { getNotifications } from "@/lib/queries";
 import { refreshNotifications } from "@/lib/notifications";
@@ -18,8 +19,16 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await refreshNotifications();
   const alerts = await getNotifications();
+
+  /**
+   * Recompute alerts *after* the response has gone out. Doing it inline put
+   * nine database round trips in front of every page, and on a serverless
+   * host the in-memory throttle resets whenever the instance goes cold — so
+   * in practice it ran on nearly every tap. Alerts you see are at most one
+   * page load behind, which for once-a-day due dates is invisible.
+   */
+  after(() => refreshNotifications());
 
   return (
     <div className="flex min-h-dvh">
