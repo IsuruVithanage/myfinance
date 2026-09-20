@@ -39,7 +39,6 @@ type Mode =
   | "expense"
   | "income"
   | "transfer"
-  | "exchange"
   | "lend"
   | "collect"
   | "borrow"
@@ -49,7 +48,6 @@ const MODES: Array<{ key: Mode; label: string }> = [
   { key: "expense", label: "Spent" },
   { key: "income", label: "Received" },
   { key: "transfer", label: "Transfer" },
-  { key: "exchange", label: "Exchange" },
   { key: "lend", label: "Lent out" },
   { key: "collect", label: "Got back" },
   { key: "borrow", label: "Borrowed" },
@@ -98,7 +96,7 @@ export default function QuickAdd({
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isPeople = ["lend", "collect", "borrow", "settle"].includes(mode);
-  const isTwoAccount = mode === "transfer" || mode === "exchange";
+  const isTwoAccount = mode === "transfer";
   const needsCategory = mode === "expense" || mode === "income";
 
   const ownAccounts = useMemo(
@@ -110,6 +108,19 @@ export default function QuickAdd({
   const toAccount = ownAccounts.find((a) => a.id === toAccountId) ?? null;
   const currency: Currency = account?.currency ?? "LKR";
   const secondaryCurrency: Currency = toAccount?.currency ?? "USD";
+  /**
+   * Moving money between currencies needs two amounts: what left one account
+   * and what landed in the other. No rate is computed or shown — the bank
+   * already decided that, and both figures are on the statement.
+   */
+  const isCrossCurrency =
+    isTwoAccount && !!toAccount && toAccount.currency !== currency;
+
+  // Switching to a same-currency destination hides the second input; make
+  // sure the keypad isn't still typing into it.
+  useEffect(() => {
+    if (!isCrossCurrency && focus === "secondary") setFocus("amount");
+  }, [isCrossCurrency, focus]);
 
   /* restore the last account used for this mode */
   useEffect(() => {
@@ -192,7 +203,7 @@ export default function QuickAdd({
     !!accountId &&
     (!needsCategory || !!categoryId) &&
     (!isTwoAccount || (!!toAccountId && toAccountId !== accountId)) &&
-    (mode !== "exchange" || secondaryMinor > 0) &&
+    (!isCrossCurrency || secondaryMinor > 0) &&
     (!isPeople || !!personId);
 
   function showToast(id: number, label: string) {
@@ -245,24 +256,23 @@ export default function QuickAdd({
           });
           break;
         case "transfer":
-          result = await addTransfer({
-            ...common,
-            fromAccountId: accountId!,
-            toAccountId: toAccountId!,
-          });
-          break;
-        case "exchange":
-          result = await addExchange({
-            date,
-            description: note.trim(),
-            fromAccountId: accountId!,
-            toAccountId: toAccountId!,
-            fromAmountMinor: amountMinor,
-            toAmountMinor: secondaryMinor,
-            feeMinor,
-            feeCategoryId: feeMinor > 0 ? (feeCategory?.id ?? null) : null,
-            feeCurrency: currency,
-          });
+          result = isCrossCurrency
+            ? await addExchange({
+                date,
+                description: note.trim(),
+                fromAccountId: accountId!,
+                toAccountId: toAccountId!,
+                fromAmountMinor: amountMinor,
+                toAmountMinor: secondaryMinor,
+                feeMinor,
+                feeCategoryId: feeMinor > 0 ? (feeCategory?.id ?? null) : null,
+                feeCurrency: currency,
+              })
+            : await addTransfer({
+                ...common,
+                fromAccountId: accountId!,
+                toAccountId: toAccountId!,
+              });
           break;
         default:
           result = await addPeopleMove({
@@ -342,7 +352,7 @@ export default function QuickAdd({
             className="eyebrow block"
             style={{ color: focus === "amount" ? "var(--green)" : undefined }}
           >
-            {mode === "exchange" ? "You send" : "Amount"}
+            {isCrossCurrency ? "Leaves as" : "Amount"}
           </span>
           <span
             className="num mt-2 block text-[3rem] font-bold leading-none"
@@ -355,17 +365,17 @@ export default function QuickAdd({
           </span>
         </button>
 
-        {mode === "exchange" && (
+        {isCrossCurrency && (
           <button
             onClick={() => setFocus("secondary")}
             className="mt-4 block w-full"
-            aria-label="Amount received"
+            aria-label="Amount arriving"
           >
             <span
               className="eyebrow block"
               style={{ color: focus === "secondary" ? "var(--green)" : undefined }}
             >
-              You receive
+              Arrives as
             </span>
             <span
               className="num mt-1 block text-2xl font-bold"
@@ -373,15 +383,6 @@ export default function QuickAdd({
             >
               {CURRENCY_META[secondaryCurrency].symbol} {secondary || "0"}
             </span>
-            {amountMinor > 0 && secondaryMinor > 0 && (
-              <span className="muted num mt-1 block text-xs">
-                rate{" "}
-                {currency === "USD"
-                  ? (secondaryMinor / amountMinor).toFixed(2)
-                  : (amountMinor / secondaryMinor).toFixed(2)}{" "}
-                LKR per USD
-              </span>
-            )}
           </button>
         )}
 
@@ -415,11 +416,7 @@ export default function QuickAdd({
       {isTwoAccount && (
         <Row label="To">
           {ownAccounts
-            .filter((a) =>
-              mode === "exchange"
-                ? a.currency !== currency
-                : a.currency === currency && a.id !== accountId,
-            )
+            .filter((a) => a.id !== accountId)
             .map((a) => (
               <Chip
                 key={a.id}
