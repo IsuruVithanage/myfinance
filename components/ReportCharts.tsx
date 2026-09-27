@@ -261,3 +261,79 @@ export function TrendChart({ data }: { data: MonthPoint[] }) {
     </div>
   );
 }
+
+/**
+ * One category over time, bucketed by day, week or month.
+ *
+ * Bars rather than a line: each bucket is a discrete amount you spent, not a
+ * level that moved continuously between readings.
+ */
+export function CategoryBars({
+  data,
+  bucket,
+  tone = "expense",
+}: {
+  data: Array<{ bucket: string; total: number }>;
+  bucket: "day" | "week" | "month";
+  tone?: "expense" | "income";
+}) {
+  if (data.every((d) => d.total === 0)) {
+    return (
+      <p className="muted py-10 text-center text-sm">
+        Nothing in this period.
+      </p>
+    );
+  }
+
+  const MONTHS = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+  const label = (iso: string) => {
+    const [y, m, d] = iso.split("-").map(Number);
+    if (bucket === "month") return MONTHS[m - 1] ?? iso;
+    if (bucket === "week") return `${d} ${MONTHS[m - 1]}`;
+    return String(d);
+  };
+
+  // Long day-ranges would otherwise print a tick per bar and turn to mush.
+  const interval = bucket === "day" && data.length > 16 ? 2 : 0;
+
+  const rows = data.map((d) => ({ ...d, label: label(d.bucket) }));
+
+  return (
+    <div style={{ width: "100%", height: 190 }}>
+      <ResponsiveContainer>
+        <BarChart data={rows} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+          <CartesianGrid
+            vertical={false}
+            stroke="var(--line)"
+            strokeDasharray="3 3"
+          />
+          <XAxis
+            dataKey="label"
+            tick={axisStyle}
+            axisLine={false}
+            tickLine={false}
+            interval={interval}
+          />
+          <YAxis
+            tick={axisStyle}
+            axisLine={false}
+            tickLine={false}
+            tickFormatter={tickMoney}
+            width={46}
+          />
+          <Tooltip content={<TooltipBox />} cursor={{ fill: "transparent" }} />
+          <Bar
+            dataKey="total"
+            name={tone === "income" ? "In" : "Spent"}
+            fill={tone === "income" ? "var(--green)" : "var(--red)"}
+            radius={[5, 5, 0, 0]}
+            isAnimationActive={false}
+          />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}

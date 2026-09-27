@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import {
   endOfMonth,
   format,
@@ -224,8 +225,11 @@ export default async function ReportsPage({
           const share = total > 0 ? b.totalBase / total : 0;
           const budget = budgetForRange(b.budgetMinor, b.budgetPeriod, from, to);
           return (
-            <li key={b.categoryId} className="hairline px-4 py-3.5">
-              <div className="flex items-center gap-3">
+            <li key={b.categoryId} className="hairline">
+              <Link
+                href={`/categories/${b.categoryId}?range=${rangeKey}`}
+                className="flex items-center gap-3 px-4 pb-1 pt-3.5 active:opacity-50"
+              >
                 <IconTile icon={iconFor(b.icon)} shape="circle" tone="pos" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[0.95rem] font-medium leading-tight">
@@ -248,10 +252,11 @@ export default async function ReportsPage({
                     <Change ratio={b.change} invert={kind === "income"} />
                   </div>
                 </div>
-              </div>
+                <ChevronRight size={16} className="faint -mr-1 shrink-0" />
+              </Link>
 
               {kind === "expense" && budget > 0 && (
-                <div className="mt-2.5">
+                <div className="px-4 pb-3.5 pt-1">
                   <Meter
                     value={b.totalBase / budget}
                     tone={

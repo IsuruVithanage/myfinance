@@ -262,6 +262,8 @@ export default async function DashboardPage() {
             {topSpend.slice(0, 4).map((c) => (
               <Row
                 key={c.categoryId}
+                href={`/categories/${c.categoryId}`}
+                chevron
                 leading={<IconTile icon={iconFor(c.icon)} shape="circle" tone="pos" />}
                 title={c.name}
                 subtitle={`${c.txnCount} transaction${c.txnCount === 1 ? "" : "s"}`}

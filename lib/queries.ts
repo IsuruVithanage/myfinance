@@ -417,6 +417,126 @@ export async function getCategoryBreakdown(
     });
 }
 
+/** One category, for its own page. */
+export async function getCategory(id: number) {
+  const [row] = await db
+    .select()
+    .from(categories)
+    .where(eq(categories.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * What one category cost over a range, plus the same-length window before it
+ * so the page can show whether it is rising or falling.
+ */
+export async function getCategorySummary(
+  categoryId: number,
+  from: string,
+  to: string,
+  kind: "expense" | "income" = "expense",
+) {
+  const sign = kind === "income" ? sql`-` : sql``;
+  const totalFor = async (a: string, b: string) => {
+    const [r] = await db
+      .select({
+        totalBase: num(sql`coalesce(sum(${sign}${postings.baseAmountMinor}), 0)`),
+        txnCount: num(sql`count(distinct ${postings.transactionId})`),
+      })
+      .from(postings)
+      .innerJoin(transactions, eq(transactions.id, postings.transactionId))
+      .where(
+        and(
+          eq(postings.categoryId, categoryId),
+          gte(transactions.date, a),
+          lte(transactions.date, b),
+        ),
+      );
+    return r ?? { totalBase: 0, txnCount: 0 };
+  };
+
+  const prev = previousWindow(from, to);
+  const [now, before] = await Promise.all([
+    totalFor(from, to),
+    totalFor(prev.from, prev.to),
+  ]);
+
+  return {
+    ...now,
+    previousBase: before.totalBase,
+    // No previous spend means no honest percentage to show.
+    change:
+      before.totalBase > 0
+        ? (now.totalBase - before.totalBase) / before.totalBase
+        : null,
+  };
+}
+
+/**
+ * One category bucketed into days, weeks or months.
+ *
+ * Postgres `date_trunc` does the grouping, and empty buckets are filled in
+ * afterwards so the chart reads as a timeline rather than a list of events.
+ */
+export async function getCategorySeries(
+  categoryId: number,
+  from: string,
+  to: string,
+  bucket: "day" | "week" | "month",
+  kind: "expense" | "income" = "expense",
+) {
+  const sign = kind === "income" ? sql`-` : sql``;
+  /**
+   * Inlined, not bound. As a parameter the SELECT and GROUP BY would carry
+   * different placeholder numbers, and Postgres compares those expressions
+   * syntactically — it rejects the query as ungrouped. Safe to inline because
+   * `bucket` is a closed union, never user input.
+   */
+  const unit = sql.raw(`'${bucket}'`);
+  const trunc = sql`date_trunc(${unit}, ${transactions.date})`;
+
+  const rows = await db
+    .select({
+      bucket: sql<string>`to_char(${trunc}, 'YYYY-MM-DD')`,
+      total: num(sql`coalesce(sum(${sign}${postings.baseAmountMinor}), 0)`),
+    })
+    .from(postings)
+    .innerJoin(transactions, eq(transactions.id, postings.transactionId))
+    .where(
+      and(
+        eq(postings.categoryId, categoryId),
+        gte(transactions.date, from),
+        lte(transactions.date, to),
+      ),
+    )
+    .groupBy(trunc)
+    .orderBy(trunc);
+
+  const byBucket = new Map(rows.map((r) => [r.bucket, r.total]));
+  const out: Array<{ bucket: string; total: number }> = [];
+
+  // Start at the truncated boundary so the first bucket lines up with the data.
+  const cursor = new Date(`${from}T00:00:00Z`);
+  if (bucket === "week") {
+    // date_trunc('week') is ISO: Monday. getUTCDay() is 0 for Sunday.
+    const shift = (cursor.getUTCDay() + 6) % 7;
+    cursor.setUTCDate(cursor.getUTCDate() - shift);
+  } else if (bucket === "month") {
+    cursor.setUTCDate(1);
+  }
+  const end = new Date(`${to}T00:00:00Z`);
+
+  while (cursor <= end) {
+    const key = cursor.toISOString().slice(0, 10);
+    out.push({ bucket: key, total: byBucket.get(key) ?? 0 });
+    if (bucket === "day") cursor.setUTCDate(cursor.getUTCDate() + 1);
+    else if (bucket === "week") cursor.setUTCDate(cursor.getUTCDate() + 7);
+    else cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+  return out;
+}
+
 /** Month-by-month income vs expense for the trend chart. */
 export async function getMonthlyTrend(months = 6) {
   const rows = await db
