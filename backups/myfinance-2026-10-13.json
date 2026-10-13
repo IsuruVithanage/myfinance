@@ -1,16 +1,16 @@
 {
   "app": "myfinance",
   "formatVersion": 1,
-  "takenAt": "2026-10-13T00:52:37.822Z",
+  "takenAt": "2026-10-13T22:57:37.218Z",
   "counts": {
     "settings": 1,
     "counterparties": 1,
     "categories": 33,
     "accounts": 7,
     "cardDetails": 0,
-    "transactions": 127,
-    "postings": 287,
-    "fxRates": 22,
+    "transactions": 131,
+    "postings": 297,
+    "fxRates": 23,
     "notifications": 1
   },
   "data": {
@@ -18,11 +18,11 @@
       {
         "id": 1,
         "baseCurrency": "LKR",
-        "fallbackUsdLkr": "330.545400",
+        "fallbackUsdLkr": "330.778400",
         "weeklyBudgetMinor": 1000000,
         "monthlyBudgetMinor": 5000000,
         "locale": "en-LK",
-        "updatedAt": "2026-10-12T01:13:16.328Z"
+        "updatedAt": "2026-10-13T14:12:01.155Z"
       }
     ],
     "counterparties": [
@@ -2105,6 +2105,54 @@
         "expectedOn": null,
         "createdAt": "2026-10-12T01:13:49.933Z",
         "updatedAt": "2026-10-12T01:13:49.933Z"
+      },
+      {
+        "id": 143,
+        "date": "2026-10-13",
+        "type": "expense",
+        "description": "",
+        "note": null,
+        "counterpartyId": null,
+        "fxRate": null,
+        "expectedOn": null,
+        "createdAt": "2026-10-13T14:14:08.360Z",
+        "updatedAt": "2026-10-13T14:14:08.360Z"
+      },
+      {
+        "id": 144,
+        "date": "2026-10-12",
+        "type": "expense",
+        "description": "",
+        "note": null,
+        "counterpartyId": null,
+        "fxRate": null,
+        "expectedOn": null,
+        "createdAt": "2026-10-13T14:14:50.533Z",
+        "updatedAt": "2026-10-13T14:14:50.533Z"
+      },
+      {
+        "id": 140,
+        "date": "2026-10-12",
+        "type": "expense",
+        "description": "",
+        "note": null,
+        "counterpartyId": null,
+        "fxRate": null,
+        "expectedOn": null,
+        "createdAt": "2026-10-13T14:12:43.124Z",
+        "updatedAt": "2026-10-13T14:15:05.220Z"
+      },
+      {
+        "id": 142,
+        "date": "2026-10-12",
+        "type": "transfer",
+        "description": "",
+        "note": null,
+        "counterpartyId": null,
+        "fxRate": null,
+        "expectedOn": null,
+        "createdAt": "2026-10-13T14:13:40.949Z",
+        "updatedAt": "2026-10-13T14:15:16.904Z"
       }
     ],
     "postings": [
@@ -4977,6 +5025,106 @@
         "currency": "LKR",
         "baseAmountMinor": 127000,
         "memo": null
+      },
+      {
+        "id": 333,
+        "transactionId": 142,
+        "accountId": 1,
+        "categoryId": null,
+        "amountMinor": -502500,
+        "currency": "LKR",
+        "baseAmountMinor": -502500,
+        "memo": null
+      },
+      {
+        "id": 334,
+        "transactionId": 142,
+        "accountId": 4,
+        "categoryId": null,
+        "amountMinor": 500000,
+        "currency": "LKR",
+        "baseAmountMinor": 500000,
+        "memo": null
+      },
+      {
+        "id": 335,
+        "transactionId": 142,
+        "accountId": null,
+        "categoryId": 19,
+        "amountMinor": 2500,
+        "currency": "LKR",
+        "baseAmountMinor": 2500,
+        "memo": "Transfer fee"
+      },
+      {
+        "id": 336,
+        "transactionId": 143,
+        "accountId": 1,
+        "categoryId": null,
+        "amountMinor": -152500,
+        "currency": "LKR",
+        "baseAmountMinor": -152500,
+        "memo": null
+      },
+      {
+        "id": 337,
+        "transactionId": 143,
+        "accountId": null,
+        "categoryId": 6,
+        "amountMinor": 150000,
+        "currency": "LKR",
+        "baseAmountMinor": 150000,
+        "memo": null
+      },
+      {
+        "id": 338,
+        "transactionId": 143,
+        "accountId": null,
+        "categoryId": 19,
+        "amountMinor": 2500,
+        "currency": "LKR",
+        "baseAmountMinor": 2500,
+        "memo": "Fee"
+      },
+      {
+        "id": 339,
+        "transactionId": 144,
+        "accountId": 4,
+        "categoryId": null,
+        "amountMinor": -119529,
+        "currency": "LKR",
+        "baseAmountMinor": -119529,
+        "memo": null
+      },
+      {
+        "id": 340,
+        "transactionId": 144,
+        "accountId": null,
+        "categoryId": 33,
+        "amountMinor": 119529,
+        "currency": "LKR",
+        "baseAmountMinor": 119529,
+        "memo": null
+      },
+      {
+        "id": 341,
+        "transactionId": 140,
+        "accountId": 6,
+        "categoryId": null,
+        "amountMinor": -90000,
+        "currency": "LKR",
+        "baseAmountMinor": -90000,
+        "memo": null
+      },
+      {
+        "id": 342,
+        "transactionId": 140,
+        "accountId": null,
+        "categoryId": 3,
+        "amountMinor": 90000,
+        "currency": "LKR",
+        "baseAmountMinor": 90000,
+        "memo": null
       }
     ],
     "fxRates": [
@@ -5155,6 +5303,14 @@
         "quote": "LKR",
         "rate": "330.54540000",
         "source": "open.er-api.com"
+      },
+      {
+        "id": 32,
+        "date": "2026-10-13",
+        "base": "USD",
+        "quote": "LKR",
+        "rate": "330.77840000",
+        "source": "open.er-api.com"
       }
     ],
     "notifications": [
@@ -5163,7 +5319,7 @@
         "kind": "overall_budget",
         "severity": "urgent",
         "title": "Over your monthly limit",
-        "body": "Rs 170,365.01 of Rs 50,000.00 spent this month.",
+        "body": "Rs 174,010.30 of Rs 50,000.00 spent this month.",
         "dedupeKey": "overall_budget:monthly:2026-10-01",
         "href": "/budgets",
         "dueDate": null,
