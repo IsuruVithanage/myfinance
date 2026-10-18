@@ -12,6 +12,7 @@ import {
   fxRates,
   notifications,
   settings,
+  subscriptions,
   transactions,
 } from "@/lib/db/schema";
 import type { Currency } from "@/lib/db/schema";
@@ -762,6 +763,61 @@ export async function dismissAlert(id: number): Promise<ActionResult> {
       .set({ dismissedAt: new Date() })
       .where(eq(notifications.id, id));
     revalidatePath("/");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/* ─────────────────────────── subscriptions ───────────────────────── */
+
+const subscriptionSchema = z.object({
+  id: z.number().optional(),
+  name: z.string().trim().min(1, "Give the subscription a name."),
+  amountMinor: z.number().int().positive("Enter what it costs."),
+  currency: z.enum(["LKR", "USD"]),
+  cycle: z.enum(["weekly", "monthly", "yearly"]),
+  nextDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick the next date."),
+  autoRenew: z.boolean(),
+  accountId: z.number().nullable(),
+  note: z.string().trim().nullable(),
+});
+
+export async function saveSubscription(
+  input: z.input<typeof subscriptionSchema>,
+): Promise<ActionResult> {
+  try {
+    await requireSession();
+    const parsed = subscriptionSchema.safeParse(input);
+    if (!parsed.success) {
+      return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the details." };
+    }
+    const { id, ...values } = parsed.data;
+    const row = { ...values, note: values.note || null };
+
+    if (id) {
+      await db.update(subscriptions).set(row).where(eq(subscriptions.id, id));
+    } else {
+      const [created] = await db.insert(subscriptions).values(row).returning();
+      revalidatePath("/");
+      revalidatePath("/subscriptions");
+      return { ok: true, id: created.id };
+    }
+    revalidatePath("/");
+    revalidatePath("/subscriptions");
+    return { ok: true, id };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function deleteSubscription(id: number): Promise<ActionResult> {
+  try {
+    await requireSession();
+    // Only the plan goes; any payments already recorded stay in the ledger.
+    await db.delete(subscriptions).where(eq(subscriptions.id, id));
+    revalidatePath("/");
+    revalidatePath("/subscriptions");
     return { ok: true };
   } catch (e) {
     return fail(e);

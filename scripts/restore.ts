@@ -23,6 +23,7 @@ const TIMESTAMP_COLUMNS: Record<string, string[]> = {
   accounts: ["createdAt"],
   transactions: ["createdAt", "updatedAt"],
   notifications: ["createdAt", "readAt", "dismissedAt"],
+  subscriptions: ["createdAt"],
 };
 
 function reviveDates(tableName: string, row: Record<string, unknown>) {

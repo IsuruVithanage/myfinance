@@ -281,6 +281,37 @@ export const fxRates = pgTable(
   (t) => [uniqueIndex("fx_rates_unique").on(t.date, t.base, t.quote)],
 );
 
+/* ────────────────────────── subscriptions ────────────────────────── */
+export const subscriptionCycleEnum = pgEnum("subscription_cycle", [
+  "weekly",
+  "monthly",
+  "yearly",
+]);
+
+/**
+ * Things you pay for on a schedule — Netflix, iCloud, a gym.
+ *
+ * A record of the plan, not of payments: what you are actually charged still
+ * goes through the ledger as an expense. `nextDate` is when the current paid
+ * period ends — the next charge if it auto-renews, the expiry if it doesn't.
+ * Renewing plans roll that date forward at read time, so it never goes stale.
+ */
+export const subscriptions = pgTable("subscriptions", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  amountMinor: bigint("amount_minor", { mode: "number" }).notNull(),
+  currency: currencyEnum("currency").notNull().default("LKR"),
+  cycle: subscriptionCycleEnum("cycle").notNull().default("monthly"),
+  nextDate: date("next_date").notNull(),
+  autoRenew: boolean("auto_renew").notNull().default(true),
+  /** The card or account it is charged to, if you want to remember. */
+  accountId: integer("account_id").references(() => accounts.id, {
+    onDelete: "set null",
+  }),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 /* ────────────────────────── notifications ────────────────────────── */
 /** In-app alert inbox. Recomputed on load; `dedupeKey` stops repeats. */
 export const notifications = pgTable(
@@ -384,6 +415,8 @@ export type Posting = typeof postings.$inferSelect;
 export type NewPosting = typeof postings.$inferInsert;
 export type FxRate = typeof fxRates.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
+export type Subscription = typeof subscriptions.$inferSelect;
+export type SubscriptionCycle = (typeof subscriptionCycleEnum.enumValues)[number];
 export type BudgetPeriod = (typeof budgetPeriodEnum.enumValues)[number];
 export type Currency = (typeof currencyEnum.enumValues)[number];
 export type AccountType = (typeof accountTypeEnum.enumValues)[number];

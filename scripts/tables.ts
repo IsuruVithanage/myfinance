@@ -7,6 +7,7 @@ import {
   notifications,
   postings,
   settings,
+  subscriptions,
   transactions,
 } from "../lib/db/schema";
 
@@ -28,4 +29,5 @@ export const TABLES = [
   { name: "postings", table: postings },
   { name: "fxRates", table: fxRates },
   { name: "notifications", table: notifications },
+  { name: "subscriptions", table: subscriptions },
 ] as const;

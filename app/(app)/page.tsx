@@ -30,6 +30,8 @@ import {
   StatTile,
 } from "@/components/ui";
 import TransactionList from "@/components/TransactionList";
+import SubscriptionRow from "@/components/SubscriptionRow";
+import { getSubscriptions } from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +57,7 @@ export default async function DashboardPage() {
    */
   after(() => refreshUsdLkrRate());
 
-  const [netWorth, totals, lastTotals, accounts, cards, topSpend, recent, rate] =
+  const [netWorth, totals, lastTotals, accounts, cards, topSpend, recent, rate, subs] =
     await Promise.all([
       getNetWorth(),
       getPeriodTotals(from, to),
@@ -65,6 +67,7 @@ export default async function DashboardPage() {
       getCategoryBreakdown(from, to, "expense"),
       getTransactions({ limit: 5 }),
       currentRateInfo(),
+      getSubscriptions(),
     ]);
 
   const spendable = accounts.filter((a) =>
@@ -251,6 +254,37 @@ export default async function DashboardPage() {
           </ul>
         </>
       )}
+
+      {/* ── subscriptions: what renews next ─────────────────────── */}
+      <SectionTitle href="/subscriptions">
+        Subscriptions
+        {subs.activeCount > 0 && (
+          <span className="num normal-case tracking-normal">
+            {" · "}
+            {formatMoney(subs.monthlyTotalBase, BASE_CURRENCY, {
+              compact: true,
+              trimZeros: true,
+            })}{" "}
+            / mo
+          </span>
+        )}
+      </SectionTitle>
+      <ul className="panel">
+        {subs.activeCount === 0 ? (
+          <Row
+            href="/subscriptions/new"
+            chevron
+            leading={<IconTile icon={Plus} shape="circle" tone="pos" />}
+            title="Track a subscription"
+            subtitle="See renewals and expiry dates here"
+          />
+        ) : (
+          subs.items
+            .filter((s) => s.status !== "expired")
+            .slice(0, 4)
+            .map((s) => <SubscriptionRow key={s.id} s={s} />)
+        )}
+      </ul>
 
       {/* ── where the money went ────────────────────────────────── */}
       {topSpend.length > 0 && (
