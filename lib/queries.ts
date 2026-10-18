@@ -276,7 +276,11 @@ export async function getTransaction(id: number) {
 /* ─────────────────────────────  reports  ─────────────────────────── */
 
 /** Income and expense totals for a date range, in base currency. */
-export async function getPeriodTotals(from: string, to: string) {
+export async function getPeriodTotals(
+  from: string,
+  to: string,
+  opts: { excludeMonthlyOnly?: boolean } = {},
+) {
   const [row] = await db
     .select({
       expense: num(
@@ -289,7 +293,13 @@ export async function getPeriodTotals(from: string, to: string) {
     .from(postings)
     .innerJoin(categories, eq(categories.id, postings.categoryId))
     .innerJoin(transactions, eq(transactions.id, postings.transactionId))
-    .where(and(gte(transactions.date, from), lte(transactions.date, to)));
+    .where(
+      and(
+        gte(transactions.date, from),
+        lte(transactions.date, to),
+        opts.excludeMonthlyOnly ? eq(categories.monthlyOnly, false) : undefined,
+      ),
+    );
 
   const expense = row?.expense ?? 0;
   const income = row?.income ?? 0;
@@ -744,7 +754,10 @@ export async function getOverallBudgets() {
   return Promise.all(
     periods.map(async ({ period, budgetMinor }) => {
       const window = currentPeriod(period);
-      const totals = await getPeriodTotals(window.from, window.to);
+      // The weekly limit is for day-to-day spending; monthly bills skip it.
+      const totals = await getPeriodTotals(window.from, window.to, {
+        excludeMonthlyOnly: period === "weekly",
+      });
       return {
         period,
         budgetMinor,

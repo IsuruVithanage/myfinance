@@ -170,6 +170,12 @@ export const categories = pgTable(
     budgetMinor: bigint("budget_minor", { mode: "number" }).notNull().default(0),
     /** Whether that amount is meant to last a week or a month. */
     budgetPeriod: budgetPeriodEnum("budget_period").notNull().default("monthly"),
+    /**
+     * Once-a-month costs — rent, subscriptions, gifts. They still count toward
+     * the monthly limit but are left out of the weekly one, where a single
+     * bill would otherwise swamp the week and hide day-to-day spending.
+     */
+    monthlyOnly: boolean("monthly_only").notNull().default(false),
     /** System categories (Bank Fees, FX Difference…) cannot be deleted. */
     isSystem: boolean("is_system").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),

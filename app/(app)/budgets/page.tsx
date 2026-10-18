@@ -31,6 +31,7 @@ export default async function BudgetsPage() {
         kind: "expense" as const,
         budgetMinor: c.budgetMinor,
         period: c.budgetPeriod,
+        monthlyOnly: c.monthlyOnly,
         spentMinor: s?.spentMinor ?? 0,
         pace: s?.pace ?? 0,
       };
@@ -63,7 +64,8 @@ export default async function BudgetsPage() {
       />
       <p className="muted mt-2.5 px-1 text-[0.78rem]">
         Counts every expense, including categories with no budget of their own.
-        Weeks run Monday to Sunday.
+        Categories marked <span style={{ color: "var(--ink)" }}>Monthly bill</span>{" "}
+        count toward the month but not the week. Weeks run Monday to Sunday.
       </p>
 
       <div className="mb-2.5 mt-8 flex items-baseline justify-between">

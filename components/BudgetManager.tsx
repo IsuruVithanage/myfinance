@@ -17,6 +17,8 @@ export type BudgetRow = {
   kind: "expense" | "income";
   budgetMinor: number;
   period: BudgetPeriod;
+  /** Left out of the overall weekly limit. */
+  monthlyOnly: boolean;
   /** Spent so far in this category's own current period. */
   spentMinor: number;
   /** 0–1 through the current period, for the on-pace read. */
@@ -34,7 +36,12 @@ export default function BudgetManager({ rows }: { rows: BudgetRow[] }) {
   const [savingId, setSavingId] = useState<number | null>(null);
   const [, start] = useTransition();
 
-  function persist(row: BudgetRow, amount: string, period: BudgetPeriod) {
+  function persist(
+    row: BudgetRow,
+    amount: string,
+    period: BudgetPeriod,
+    monthlyOnly = row.monthlyOnly,
+  ) {
     setSavingId(row.id);
     start(async () => {
       await saveCategory({
@@ -45,6 +52,7 @@ export default function BudgetManager({ rows }: { rows: BudgetRow[] }) {
         color: row.color,
         budgetMinor: toMinor(amount || "0", BASE_CURRENCY),
         budgetPeriod: period,
+        monthlyOnly,
       });
       setSavingId(null);
       setDrafts((d) => {
@@ -125,17 +133,34 @@ export default function BudgetManager({ rows }: { rows: BudgetRow[] }) {
             </div>
 
             <div className="mt-2.5 flex items-center gap-3">
-              <div className="flex gap-1">
-                {PERIODS.map((p) => (
-                  <button
-                    key={p.key}
-                    aria-pressed={row.period === p.key}
-                    className="chip !px-2.5 !py-1 text-[0.72rem]"
-                    onClick={() => persist(row, value, p.key)}
-                  >
-                    {p.short}
-                  </button>
-                ))}
+              <div className="flex shrink-0 gap-1">
+                {/* A monthly bill has no week to budget against. */}
+                {!row.monthlyOnly &&
+                  PERIODS.map((p) => (
+                    <button
+                      key={p.key}
+                      aria-pressed={row.period === p.key}
+                      className="chip !px-2.5 !py-1 text-[0.72rem]"
+                      onClick={() => persist(row, value, p.key)}
+                    >
+                      {p.short}
+                    </button>
+                  ))}
+                <button
+                  aria-pressed={row.monthlyOnly}
+                  title="Leave out of the weekly limit"
+                  className="chip !px-2.5 !py-1 text-[0.72rem]"
+                  onClick={() =>
+                    persist(
+                      row,
+                      value,
+                      row.monthlyOnly ? row.period : "monthly",
+                      !row.monthlyOnly,
+                    )
+                  }
+                >
+                  Monthly bill
+                </button>
               </div>
 
               {row.budgetMinor > 0 && (

@@ -316,27 +316,46 @@ export async function saveCategory(input: {
   color?: string;
   budgetMinor?: number;
   budgetPeriod?: "weekly" | "monthly";
+  monthlyOnly?: boolean;
 }): Promise<ActionResult> {
   try {
     await requireSession();
     const name = input.name.trim();
     if (!name) return { ok: false, error: "Give the category a name." };
 
-    const values = {
-      name,
-      kind: input.kind,
-      icon: input.icon ?? "tag",
-      color: input.color ?? "#64748b",
-      budgetMinor: input.budgetMinor ?? 0,
-      budgetPeriod: input.budgetPeriod ?? "monthly",
-    };
+    // A monthly-only category can't sensibly carry a weekly budget.
+    const budgetPeriod = input.monthlyOnly ? "monthly" : input.budgetPeriod;
 
     if (input.id) {
-      await db.update(categories).set(values).where(eq(categories.id, input.id));
+      /**
+       * Only touch what the caller sent. Renaming from Settings passes no
+       * budget fields, and defaulting them here used to wipe the budget.
+       */
+      const patch = {
+        name,
+        kind: input.kind,
+        ...(input.icon !== undefined && { icon: input.icon }),
+        ...(input.color !== undefined && { color: input.color }),
+        ...(input.budgetMinor !== undefined && { budgetMinor: input.budgetMinor }),
+        ...(budgetPeriod !== undefined && { budgetPeriod }),
+        ...(input.monthlyOnly !== undefined && { monthlyOnly: input.monthlyOnly }),
+      };
+      await db.update(categories).set(patch).where(eq(categories.id, input.id));
       refreshAll();
       return { ok: true, id: input.id };
     }
-    const [row] = await db.insert(categories).values(values).returning();
+    const [row] = await db
+      .insert(categories)
+      .values({
+        name,
+        kind: input.kind,
+        icon: input.icon ?? "tag",
+        color: input.color ?? "#64748b",
+        budgetMinor: input.budgetMinor ?? 0,
+        budgetPeriod: budgetPeriod ?? "monthly",
+        monthlyOnly: input.monthlyOnly ?? false,
+      })
+      .returning();
     refreshAll();
     return { ok: true, id: row.id };
   } catch (e) {
